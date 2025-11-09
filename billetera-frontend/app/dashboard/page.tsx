@@ -1,4 +1,4 @@
-// src/app/dashboard/page.tsx (Versión Limpia)
+
 'use client'; 
 
 import Link from 'next/link';
@@ -30,8 +30,9 @@ export default function DashboardPage() {
     }
 
     try {
-      // ¡¡ARREGLO!! Solo llamamos a las 2 APIs que SÍ funcionan.
-      const [balanceRes, transactionsRes] = await Promise.all([
+  
+      // Hacemos las 3 llamadas a la API al mismo tiempo
+      const [balanceRes, transactionsRes, groupsRes] = await Promise.all([
         // 1. Saldo
         fetch('http://localhost:8080/balance/me', {
           headers: { 'Authorization': `Bearer ${token}` },
@@ -40,13 +41,13 @@ export default function DashboardPage() {
         fetch('http://localhost:8080/ledger/transactions/me', {
           headers: { 'Authorization': `Bearer ${token}` },
         }),
-        // 3. Mis Grupos (Pausado temporalmente por el error 422)
-        // fetch('http://localhost:8080/groups/me', {
-        //   headers: { 'Authorization': `Bearer ${token}` },
-        // })
+        // 3. Mis Grupos 
+        fetch('http://localhost:8080/groups/me', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        })
       ]);
 
-      // Verificamos las 2 respuestas
+      // Verificamos las 3 respuestas
       if (!balanceRes.ok) {
         const data = await balanceRes.json();
         throw new Error(data.detail || 'Error al obtener el saldo');
@@ -55,28 +56,33 @@ export default function DashboardPage() {
         const data = await transactionsRes.json();
         throw new Error(data.detail || 'Error al obtener movimientos');
       }
+     
+      if (!groupsRes.ok) {
+        const data = await groupsRes.json();
+        
+        throw new Error(data.detail[0]?.msg || data.detail || 'Error al obtener grupos'); 
+      }
 
       // Extraemos los JSON
       const balanceData = await balanceRes.json();
       const transactionsData = await transactionsRes.json();
-      // const groupsData = await groupsRes.json(); // Pausado
+      const groupsData = await groupsRes.json(); 
 
-      // ¡Éxito! Guardamos los datos (sin 'groups')
+      // ¡Éxito! Guardamos todo
       setBalance(balanceData.balance);
       setTransactions(transactionsData);
-      // setGroups(groupsData); // Pausado
+      setGroups(groupsData); 
 
     } catch (err: any) {
       setError(err.message);
     } finally {
-      // ¡Esta línea AHORA SÍ se ejecutará!
       setLoading(false);
     }
   };
 
   // 2. Usa useEffect para llamar a la función SÓLO al cargar la página
   useEffect(() => {
-      fetchPageData();
+    fetchPageData();
   }, []); // El array vacío [] significa "ejecutar solo una vez"
 
   return (
@@ -90,7 +96,7 @@ export default function DashboardPage() {
 
         {/* --- COLUMNA 1: BDI y BDG --- */}
         <div className="space-y-6">
-
+        
           {/* Tarjeta de Saldo BDI */}
           <div className="bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-semibold text-gray-300 mb-4">
@@ -128,8 +134,8 @@ export default function DashboardPage() {
               </h2>
               <button 
                 onClick={() => setIsCreateGroupModalOpen(true)}
-                disabled // <-- Botón deshabilitado temporalmente
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+                // ¡Botón REACTIVADO!
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
               >
                 Crear Grupo
               </button>
@@ -139,16 +145,21 @@ export default function DashboardPage() {
             <div className="space-y-3 max-h-48 overflow-y-auto">
               {loading && <p className="text-gray-400">Cargando grupos...</p>}
               {!loading && groups.length === 0 && (
-                <p className="text-gray-400">(Función de grupos en pausa)</p>
+                <p className="text-gray-400">No eres miembro de ningún grupo.</p>
               )}
-              {/* El mapeo de 'groups' no se ejecutará porque está vacío */
-              groups.map((group) => (
+              {groups.map((group) => (
                 <div key={group.id} className="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
-                  {/* ... (código de grupo) ... */}
+                  <div>
+                    <p className="font-semibold text-white">{group.name}</p>
+                    <p className="text-sm text-gray-400">{group.members.length} miembro(s)</p>
+                  </div>
+                  <button className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold py-1 px-3 rounded">
+                    Aportar
+                  </button>
                 </div>
               ))}
             </div>
-
+            
           </div>
           {/* --- Fin Tarjeta BDG --- */}
 
@@ -195,7 +206,7 @@ export default function DashboardPage() {
       </div>
       {/* --- Fin Grid Principal --- */}
 
-
+      
       <div className="mt-12">
         <Link href="/" className="text-sm text-gray-400 hover:text-indigo-300">
           Cerrar Sesión
@@ -210,7 +221,7 @@ export default function DashboardPage() {
           fetchPageData(); 
         }}
       />
-
+      
       <P2PTransferModal
         isOpen={isP2PModalOpen}
         onClose={() => setIsP2PModalOpen(false)}
@@ -219,15 +230,15 @@ export default function DashboardPage() {
         }}
       />
 
-      {/* Mantenemos este modal comentado por ahora */}
-      {/* <CreateGroupModal
+      {/* Modal de Crear Grupo  */}
+      <CreateGroupModal
         isOpen={isCreateGroupModalOpen}
         onClose={() => setIsCreateGroupModalOpen(false)}
         onGroupCreated={() => {
-          fetchPageData(); 
+          fetchPageData(); // Refresca todo (incluyendo la lista de grupos)
         }}
-      /> */}
-
+      />
+      
     </main>
   );
 }
