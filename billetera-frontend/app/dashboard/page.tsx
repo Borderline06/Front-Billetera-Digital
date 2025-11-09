@@ -235,7 +235,7 @@ export default function DashboardPage() {
         isOpen={isCreateGroupModalOpen}
         onClose={() => setIsCreateGroupModalOpen(false)}
         onGroupCreated={() => {
-          fetchPageData(); // Refresca todo (incluyendo la lista de grupos)
+          fetchPageData(); // Refresca todo (incluyendo la lista de grupos) xddddd
         }}
       />
       
