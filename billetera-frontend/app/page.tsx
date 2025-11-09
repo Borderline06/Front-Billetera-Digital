@@ -3,9 +3,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   // --- Estados para manejar el formulario ---
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,10 @@ export default function LoginPage() {
       // ¡ÉXITO!
       console.log('Login exitoso:', data);
       setWelcomeMessage(`¡Bienvenido! Tu token es: ${data.access_token.substring(0, 15)}...`);
+      localStorage.setItem('pixel-token', data.access_token);
       // Aquí es donde guardarías el token (lo veremos después)
+      // Redirigir al Dashboard
+      router.push('/dashboard');
 
     } catch (err: any) {
       setError(err.message);

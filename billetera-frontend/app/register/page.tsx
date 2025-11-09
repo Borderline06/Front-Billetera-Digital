@@ -8,6 +8,7 @@ export default function RegisterPage() {
   // --- Estados ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export default function RegisterPage() {
     const payload = {
       email: email,
       password: password,
+      phone_number: phone,
     };
 
     try {
@@ -41,8 +43,19 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Error 400 (email duplicado) o 500
-        throw new Error(data.detail || 'Error al registrar el usuario');
+        let errorMessage = 'Error al registrar el usuario.';
+
+        // Pydantic (422) envía un array de errores en 'detail'
+        if (Array.isArray(data.detail)) {
+          // Tomamos el primer error y lo mostramos
+          errorMessage = data.detail[0].msg || 'Error de validación.';
+        } 
+        // Los errores 409 (duplicado) o 500 envían un string en 'detail'
+        else if (typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        }
+
+        throw new Error(errorMessage);
       }
 
       // ¡ÉXITO!
@@ -87,6 +100,28 @@ export default function RegisterPage() {
               placeholder="tu@correo.com"
             />
           </div>
+
+          
+          <div>
+            <label
+              htmlFor="phone"
+              className="block text-sm font-medium text-gray-300"
+            >
+              Número de Celular (Celular)
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel" 
+              autoComplete="tel"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="987654321"
+            />
+          </div>
+          
 
           <div>
             <label
