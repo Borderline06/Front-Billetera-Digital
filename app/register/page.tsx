@@ -6,6 +6,7 @@ import Link from 'next/link'; // Para el enlace de "Volver"
 
 export default function RegisterPage() {
   // --- Estados ---
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,6 +27,7 @@ export default function RegisterPage() {
 
     // ¡El endpoint de registro SÍ espera JSON!
     const payload = {
+      name: name,
       email: email,
       password: password,
       phone_number: phone,
@@ -79,8 +81,24 @@ export default function RegisterPage() {
           Crear Cuenta
         </h1>
 
-        {/* Formulario de Registro */}
+        
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-300">
+              Nombre
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Tu nombre"
+            />
+          </div>
+
+        {/* Formulario de Registro */}
           <div>
             <label
               htmlFor="email"
