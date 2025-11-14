@@ -51,6 +51,79 @@ export default function GroupsPage() {
     fetchGroups();
   }, []);
 
+  // ================================
+  // 1️⃣ FUNCION CONTRIBUIR
+  // ================================
+  const contributeToGroup = async (groupId: number) => {
+    const token = localStorage.getItem("pixel-token");
+    const userId = Number(localStorage.getItem("pixel-user-id")); // AJUSTA SI TU USER VA EN JWT
+    const amount = Number(prompt("¿Cuánto deseas contribuir?"));
+
+    if (!amount || amount <= 0) return alert("Monto inválido.");
+
+    const idempotencyKey = crypto.randomUUID();
+
+    try {
+      const response = await fetch(`${API_GATEWAY_URL}/ledger/contribute`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "Idempotency-Key": idempotencyKey
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          group_id: groupId,
+          amount: amount
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return alert(`Error: ${data.detail}`);
+      }
+
+      alert("Contribución enviada correctamente.");
+    } catch (error) {
+      console.error("Error al contribuir:", error);
+      alert("Error al procesar el aporte.");
+    }
+  };
+
+  // ================================
+  // 2️⃣ FUNCION INVITAR
+  // ================================
+  const inviteUser = async (groupId: number) => {
+    const phone = prompt("Ingresa el número de celular del usuario a invitar:");
+
+    if (!phone) return;
+
+    const token = localStorage.getItem("pixel-token");
+
+    try {
+      const response = await fetch(`${API_GATEWAY_URL}/groups/${groupId}/invite`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ phone_number: phone })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return alert(`Error invitando: ${data.detail}`);
+      }
+
+      alert("Usuario invitado correctamente.");
+    } catch (error) {
+      console.error("Error al invitar:", error);
+      alert("No se pudo enviar la invitación.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -82,6 +155,23 @@ export default function GroupsPage() {
               <p className="text-sm text-gray-500">
                 Creado el {new Date(group.created_at).toLocaleDateString()}
               </p>
+
+              {/* ==== BOTONES AQUI ==== */}
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => inviteUser(group.id)}
+                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Invitar
+                </button>
+
+                <button
+                  onClick={() => contributeToGroup(group.id)}
+                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Contribuir
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -91,7 +181,7 @@ export default function GroupsPage() {
       <CreateGroupModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onGroupCreated={fetchGroups} // refresca al crear
+        onGroupCreated={fetchGroups}
       />
     </div>
   );
