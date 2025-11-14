@@ -2,11 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import CreateGroupModal from './CreateGroupModal';
+import ContributeModal from './ContributeModal';
+
+interface GroupMember {
+  user_id: number;
+  role: 'leader' | 'member';
+  group_id: number;
+}
 
 interface Group {
   id: number;
   name: string;
-  created_at: string;
+  leader_user_id: number;
+  created_at: string; // ¡Esto ahora existirá gracias al Paso 1!
+  members: GroupMember[]; // ¡Ahora recibimos la lista de miembros!
 }
 
 const API_GATEWAY_URL = 'http://localhost:8080';
@@ -16,6 +25,8 @@ export default function GroupsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 
   const fetchGroups = async () => {
     try {
@@ -76,12 +87,34 @@ export default function GroupsPage() {
           {groups.map((group) => (
             <li
               key={group.id}
-              className="bg-white shadow p-4 rounded-md border hover:shadow-lg transition"
+              className="bg-white shadow p-4 rounded-md border hover:shadow-lg transition flex flex-col justify-between"
             >
-              <h2 className="font-semibold text-lg">{group.name}</h2>
-              <p className="text-sm text-gray-500">
-                Creado el {new Date(group.created_at).toLocaleDateString()}
+              {/* Sección de Info */}
+              <div>
+                <h2 className="font-semibold text-lg text-indigo-700">{group.name}</h2>
+                <p className="text-sm text-gray-500">
+                  {group.members.length} miembro(s)
+                </p>
+              </div>
+
+              {/* Sección de Fecha (abajo) */}
+              <p className="text-xs text-gray-400 mt-4">
+                Creado el {new Date(group.created_at).toLocaleDateString('es-PE')}
               </p>
+
+              {/* --- ¡BOTÓN NUEVO! --- */}
+            <button 
+              onClick={() => {
+                setSelectedGroup(group);
+                setIsContributeModalOpen(true);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded"
+            >
+              Aportar
+            </button>
+            {/* --- FIN BOTÓN NUEVO --- */}
+
+              {/* (Aquí pondremos los botones de Aportar/Invitar/Ver) */}
             </li>
           ))}
         </ul>
@@ -93,6 +126,21 @@ export default function GroupsPage() {
         onClose={() => setIsModalOpen(false)}
         onGroupCreated={fetchGroups} // refresca al crear
       />
+
+          {/* --- ¡AÑADE ESTE BLOQUE! --- */}
+      {selectedGroup && (
+        <ContributeModal
+          isOpen={isContributeModalOpen}
+          onClose={() => setIsContributeModalOpen(false)}
+          group={selectedGroup}
+          onContributeSuccess={() => {
+            fetchGroups(); // Refresca la lista de grupos
+            // Idealmente, también refrescaría el dashboard,
+            // pero por ahora esto es suficiente.
+          }}
+        />
+      )}
+      {/* --- FIN DEL BLOQUE --- */}
     </div>
   );
 }
