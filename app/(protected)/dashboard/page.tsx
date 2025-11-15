@@ -14,7 +14,7 @@ import {
 import { FaPlusSquare, FaCreditCard, FaPlus, FaMinus, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { TbSend } from 'react-icons/tb';
 
-import DepositModal from './depositmodal';
+import LoanModal from './depositmodal';
 
 interface DailyBalance {
   date: string;
@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const [dailyBalance, setDailyBalance] = useState<DailyBalance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('pixel-token') : null;
 
@@ -114,13 +114,13 @@ export default function DashboardPage() {
     .reduce((acc, tx) => acc + tx.amount, 0);
 
   return (
-  <div className="space-y-8">
-    {/* MODAL DE DEPÓSITO */}
-    <DepositModal
-      isOpen={isDepositOpen}
-      onClose={() => setIsDepositOpen(false)}
-      onDepositSuccess={refreshData}
-    />
+    <div className="space-y-8">
+      {/* MODAL DE DEPÓSITO */}
+            <LoanModal
+        isOpen={isLoanModalOpen}
+        onClose={() => setIsLoanModalOpen(false)}
+        onLoanSuccess={refreshData}
+      />
 
     {/* Resumen superior */}
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
@@ -144,16 +144,21 @@ export default function DashboardPage() {
       </div>
     </div>
 
-    {/* Botones: Depositar / Retirar / Enviar */}
-    <div className="flex gap-4 items-center">
-      {/* Depositar */}
-      <button
-        onClick={() => setIsDepositOpen(true)}
-        className="flex items-center gap-2 bg-indigo-900 text-white px-5 py-2 rounded-lg font-medium hover:bg-indigo-800 dark:bg-indigo-700 dark:hover:bg-indigo-600"
-      >
-        <FaCreditCard className="text-lg" />
-        Recargar Saldo (Sim)
-      </button>
+      {/* Botones: Depositar / Retirar / Enviar */}
+      <div className="flex gap-4 items-center">
+        {/* Depositar */}
+        <button
+          onClick={() => setIsLoanModalOpen(true)}
+          className="flex items-center gap-2 bg-indigo-900 text-white px-5 py-2 rounded-lg font-medium hover:bg-indigo-800"
+        >
+          <FaCreditCard className="text-lg" />
+          Pedir Préstamo (Sim)
+        </button>
+
+        {/* Retirar */}
+        <button className="flex items-center gap-2 border border-gray-300 text-gray-700 px-5 py-2 rounded-lg font-medium hover:bg-gray-100">
+          Retirar (Próximamente)
+        </button>
 
       {/* Retirar */}
       <button className="flex items-center gap-2 border border-gray-300 text-gray-700 px-5 py-2 rounded-lg font-medium hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">

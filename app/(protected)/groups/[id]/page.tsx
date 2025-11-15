@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Hook para leer la URL y redirigir
 import Link from 'next/link';
 import RequestWithdrawalModal from './RequestWithdrawalModal'; // Importamos el modal de solicitud
+import LeaderWithdrawalModal from './LeaderWithdrawalModal';
 
 // --- Definimos las plantillas de datos ---
 interface GroupMember {
@@ -65,6 +66,7 @@ export default function GroupDetailPage() {
   const [isLeader, setIsLeader] = useState(false); 
   
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isLeaderWithdrawalModalOpen, setIsLeaderWithdrawalModalOpen] = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('pixel-token') : null;
   const myUserId = typeof window !== 'undefined' ? parseInt(localStorage.getItem('pixel-user-id') || '0') : 0;
@@ -269,11 +271,35 @@ export default function GroupDetailPage() {
       </p>
     </div>
 
-    {/* Mostrar error */}
-    {error && (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative dark:bg-red-800 dark:border-red-600 dark:text-red-200" role="alert">
-        <strong className="font-bold">¡Error! </strong>
-        <span className="block sm:inline">{error}</span>
+      {/* Saldo del Grupo */}
+      <div className="bg-white p-6 rounded-lg shadow border">
+        <div className="flex justify-between items-center">
+          <h2 className="text-sm font-medium text-gray-500">SALDO TOTAL DEL GRUPO</h2>
+          {!isLeader && (
+            <button 
+              onClick={() => setIsRequestModalOpen(true)}
+              className="text-sm bg-indigo-100 text-indigo-700 font-medium py-1 px-3 rounded-lg hover:bg-indigo-200"
+            >
+              Solicitar Retiro
+            </button>
+          )}
+
+                {/* --- ¡NUEVO BOTÓN DE LÍDER! --- */}
+            {isLeader && ( 
+            <button 
+                onClick={() => setIsLeaderWithdrawalModalOpen(true)}
+                className="text-sm bg-blue-100 text-blue-700 font-medium py-1 px-3 rounded-lg hover:bg-blue-200"
+            >
+                Retiro de Líder
+            </button>
+            )}
+
+
+
+        </div>
+        <p className="text-4xl font-bold text-indigo-700 mt-2">
+          S/ {balance.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+        </p>
       </div>
     )}
 
@@ -422,6 +448,18 @@ export default function GroupDetailPage() {
           fetchGroupData(); // Refresca todo
         }}
       />
+
+
+
+            {/* --- ¡AÑADE ESTE MODAL! --- */}
+        <LeaderWithdrawalModal
+        isOpen={isLeaderWithdrawalModalOpen}
+        onClose={() => setIsLeaderWithdrawalModalOpen(false)}
+        group={{ id: group.id, name: group.name }}
+        onWithdrawalSuccess={() => {
+            fetchGroupData(); // Refresca todo
+        }}
+        />
     </div>
   );
 }
