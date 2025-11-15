@@ -1,18 +1,10 @@
+
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
 /* NO usar variables personalizadas para background/text */
 body {
   font-family: Arial, Helvetica, sans-serif;
-}
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-.dark {
-  --background: #171717;
-  --foreground: #ffffff;
 }
 
 /* Animaciones personalizadas */
@@ -47,4 +39,11 @@ body {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
