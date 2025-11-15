@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Hook para leer la URL y redirigir
 import Link from 'next/link';
+import RequestWithdrawalModal from './RequestWithdrawalModal';
 
 // --- Definimos las plantillas de datos ---
 interface GroupMember {
@@ -49,6 +50,7 @@ export default function GroupDetailPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('pixel-token') : null;
   const myUserId = typeof window !== 'undefined' ? parseInt(localStorage.getItem('pixel-user-id') || '0') : 0;
@@ -164,6 +166,39 @@ export default function GroupDetailPage() {
     }
   };
 
+// --- 5. LÓGICA PARA "BORRAR GRUPO" ---
+  const handleDeleteGroup = async () => {
+    if (!group) return;
+    if (!window.confirm("¿Estás seguro de que quieres BORRAR este grupo? Esta acción es PERMANENTE y no se puede deshacer.")) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_GATEWAY_URL}/groups/${group.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        // ¡Aquí mostramos la restricción de deuda o saldo!
+        throw new Error(data.detail || 'Error al intentar borrar el grupo');
+      }
+
+      alert("El grupo ha sido eliminado exitosamente.");
+      router.push('/groups'); // Redirige de vuelta a la lista
+
+    } catch (err: any) {
+      setError(err.message); 
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
   // --- 5. RENDERIZADO ---
   const isLeader = group?.leader_user_id === myUserId;
 
@@ -190,6 +225,19 @@ export default function GroupDetailPage() {
               Salir del Grupo
             </button>
           )}
+
+
+
+                    {/* --- ¡NUEVO BOTÓN BORRAR! (para Líder) --- */}
+            {isLeader && (
+                <button
+                onClick={handleDeleteGroup}
+                disabled={loading}
+                className="bg-red-600 text-white text-sm font-medium py-1 px-3 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                Borrar Grupo
+                </button>
+            )}
         </div>
         {/* --- FIN DEL CONTENEDOR --- */}
 
@@ -208,6 +256,15 @@ export default function GroupDetailPage() {
       {/* Saldo del Grupo */}
       <div className="bg-white p-6 rounded-lg shadow border">
         <h2 className="text-sm font-medium text-gray-500">SALDO TOTAL DEL GRUPO</h2>
+            {/* --- ¡NUEVO BOTÓN DE RETIRO! --- */}
+        {!isLeader && ( // Solo los miembros (no el líder) pueden "solicitar"
+        <button 
+            onClick={() => setIsRequestModalOpen(true)}
+            className="text-sm bg-indigo-100 text-indigo-700 font-medium py-1 px-3 rounded-lg hover:bg-indigo-200"
+        >
+            Solicitar Retiro
+        </button>
+        )}
         <p className="text-4xl font-bold text-indigo-700 mt-2">
           S/ {balance.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
         </p>
@@ -288,7 +345,14 @@ export default function GroupDetailPage() {
           </ul>
         )}
       </div>
-      
+            <RequestWithdrawalModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        group={{ id: group.id, name: group.name }}
+        onRequestSuccess={() => {
+            fetchGroupData(); // Refresca todo
+        }}
+/>
     </div>
   );
 }
