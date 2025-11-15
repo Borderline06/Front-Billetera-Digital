@@ -69,36 +69,40 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
 
 
 return (
-  <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full">
+  <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 max-w-md w-full">
 
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Celular del Destinatario</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Celular del Destinatario
+        </label>
         <input
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-gray-50 shadow-inner focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+          className="w-full rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-2.5 bg-gray-50 dark:bg-gray-700 shadow-inner focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 dark:focus:border-indigo-300 transition text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300"
           placeholder="987654321"
           required
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Monto (S/)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Monto (S/)
+        </label>
         <input
           type="number"
           step="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-gray-50 shadow-inner focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+          className="w-full rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-2.5 bg-gray-50 dark:bg-gray-700 shadow-inner focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 dark:focus:border-indigo-300 transition text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300"
           placeholder="Ej: 50.00"
           required
         />
       </div>
 
       {error && (
-        <p className="text-red-500 text-sm font-medium bg-red-50 border border-red-200 p-2 rounded-lg">
+        <p className="text-red-500 text-sm font-medium bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 p-2 rounded-lg">
           {error}
         </p>
       )}
@@ -106,12 +110,13 @@ return (
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-indigo-900 text-white py-2.5 rounded-xl font-semibold tracking-wide 
-                   hover:bg-indigo-800 transition disabled:opacity-60"
+        className="w-full bg-indigo-900 dark:bg-indigo-700 text-white py-2.5 rounded-xl font-semibold tracking-wide 
+                   hover:bg-indigo-800 dark:hover:bg-indigo-600 transition disabled:opacity-60"
       >
         {loading ? "Procesando..." : "Enviar Transferencia"}
       </button>
     </form>
   </div>
 );
+
 }

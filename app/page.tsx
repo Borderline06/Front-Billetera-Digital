@@ -12,7 +12,7 @@ export default function LandingPage() {
       <header className="flex justify-between items-center px-8 py-4 bg-white dark:bg-gray-800 shadow-sm">
         <div className="flex items-center space-x-2">
           <Image
-            src="/PixelMoneyLogo.png"
+            src="/PixelMoneyLogoPng.png"
             alt="Pixel Money"
             width={32}
             height={32}

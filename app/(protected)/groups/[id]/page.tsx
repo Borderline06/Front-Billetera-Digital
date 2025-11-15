@@ -232,179 +232,186 @@ export default function GroupDetailPage() {
   // const isLeader = group?.leader_user_id === myUserId; 
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="pb-4 border-b">
-        <div className="flex justify-between items-center">
-          <Link href="/groups" className="text-sm text-indigo-600 hover:underline">&larr; Volver a Mis Grupos</Link>
-          
-          {!isLeader && (
-            <button
-              onClick={handleLeaveGroup}
-              disabled={loading} 
-              className="bg-red-100 text-red-700 text-sm font-medium py-1 px-3 rounded-lg hover:bg-red-200 disabled:opacity-50"
-            >
-              Salir del Grupo
-            </button>
-          )}
-          {isLeader && (
-            <button
-              onClick={handleDeleteGroup}
-              disabled={loading}
-              className="bg-red-600 text-white text-sm font-medium py-1 px-3 rounded-lg hover:bg-red-700 disabled:opacity-50"
-            >
-              Borrar Grupo
-            </button>
-          )}
-        </div>
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="pb-4 border-b dark:border-gray-700">
+      <div className="flex justify-between items-center">
+        <Link
+          href="/groups"
+          className="text-sm text-indigo-600 hover:underline dark:text-indigo-400"
+        >
+          &larr; Volver a Mis Grupos
+        </Link>
 
-        <h1 className="text-3xl font-bold mt-2">{group.name}</h1>
-        <p className="text-lg text-gray-600">Líder: {group.members.find(m => m.role === 'leader')?.name || `Usuario ID ${group.leader_user_id}`} {isLeader && "(Tú)"}</p>
+        {!isLeader && (
+          <button
+            onClick={handleLeaveGroup}
+            disabled={loading}
+            className="bg-red-100 text-red-700 text-sm font-medium py-1 px-3 rounded-lg hover:bg-red-200 disabled:opacity-50 dark:bg-red-700 dark:text-red-200 dark:hover:bg-red-600"
+          >
+            Salir del Grupo
+          </button>
+        )}
+        {isLeader && (
+          <button
+            onClick={handleDeleteGroup}
+            disabled={loading}
+            className="bg-red-100 text-red-700 text-sm font-medium py-1 px-3 rounded-lg hover:bg-red-200 disabled:opacity-50 dark:bg-red-700 dark:text-red-200 dark:hover:bg-red-600"
+          >
+            Borrar Grupo
+          </button>
+        )}
       </div>
 
-      {/* Mostrar error de 'kick', 'leave', 'approve', 'reject' aquí */}
-      {error && (
-         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong className="font-bold">¡Error! </strong>
-            <span className="block sm:inline">{error}</span>
-         </div>
-      )}
+      <h1 className="text-3xl font-bold mt-2 dark:text-gray-100">{group.name}</h1>
+      <p className="text-lg text-gray-600 dark:text-gray-400">
+        Líder: {group.members.find(m => m.role === 'leader')?.name || `Usuario ID ${group.leader_user_id}`} {isLeader && "(Tú)"}
+      </p>
+    </div>
 
-      {/* Saldo del Grupo */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <div className="flex justify-between items-center">
-          <h2 className="text-sm font-medium text-gray-500">SALDO TOTAL DEL GRUPO</h2>
-          {!isLeader && (
-            <button 
-              onClick={() => setIsRequestModalOpen(true)}
-              className="text-sm bg-indigo-100 text-indigo-700 font-medium py-1 px-3 rounded-lg hover:bg-indigo-200"
-            >
-              Solicitar Retiro
-            </button>
-          )}
-        </div>
-        <p className="text-4xl font-bold text-indigo-700 mt-2">
-          S/ {balance.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-        </p>
+    {/* Mostrar error */}
+    {error && (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative dark:bg-red-800 dark:border-red-600 dark:text-red-200" role="alert">
+        <strong className="font-bold">¡Error! </strong>
+        <span className="block sm:inline">{error}</span>
       </div>
+    )}
 
-      {/* Panel de Aprobación del Líder */}
-      {isLeader && (
-        <div className="bg-white p-6 rounded-lg shadow border border-yellow-300">
-          <h2 className="text-xl font-semibold mb-4">Solicitudes Pendientes (Líder)</h2>
-          {requests.filter(r => r.status === 'pending').length === 0 ? (
-            <p className="text-gray-500">No hay solicitudes pendientes.</p>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {requests.filter(r => r.status === 'pending').map((req) => {
-                const memberName = group.members.find(m => m.user_id === req.member_user_id)?.name || `ID ${req.member_user_id}`;
-                return (
-                  <li key={req.id} className="py-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-indigo-700">
-                          {memberName} solicita S/ {req.amount.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-gray-600 italic">
-                          Razón: "{req.reason || 'N/A'}"
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(req.created_at).toLocaleString('es-PE')}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => handleRejectRequest(req.id)}
-                          disabled={loading}
-                          className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded"
-                        >
-                          Rechazar
-                        </button>
-                        <button 
-                          onClick={() => handleApproveRequest(req.id)}
-                          disabled={loading}
-                          className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded"
-                        >
-                          Aprobar
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {/* Lista de Miembros */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <h2 className="text-xl font-semibold mb-4">Miembros ({group.members.length})</h2>
-        <ul className="divide-y divide-gray-200">
-          {group.members.map((member) => (
-            <li key={member.user_id} className="py-3 flex justify-between items-center">
-              <div>
-                <p className="font-medium">
-                  {member.name}
-                  {member.user_id === myUserId && " (Tú)"}
-                </p>
-                <p className={`text-sm ${member.role === 'leader' ? 'text-indigo-500' : 'text-gray-500'}`}>
-                  {member.role}
-                </p>
-                <p className={`text-sm font-mono ${member.internal_balance < 0 ? 'text-red-500' : 'text-green-600'}`}>
-                  Saldo Interno: S/ {member.internal_balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  member.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {member.status}
-                </span>
-                {isLeader && member.user_id !== myUserId && (
-                  <button
-                    onClick={() => handleKickMember(member)}
-                    disabled={loading}
-                    className="text-xs text-red-500 hover:underline disabled:opacity-50"
-                  >
-                    Eliminar
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+    {/* Saldo del Grupo */}
+    <div className="bg-white p-6 rounded-lg shadow border dark:bg-gray-800 dark:border-gray-700">
+      <div className="flex justify-between items-center">
+        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">SALDO TOTAL DEL GRUPO</h2>
+        {!isLeader && (
+          <button
+            onClick={() => setIsRequestModalOpen(true)}
+            className="text-sm bg-indigo-100 text-indigo-700 font-medium py-1 px-3 rounded-lg hover:bg-indigo-200 dark:bg-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-600"
+          >
+            Solicitar Retiro
+          </button>
+        )}
       </div>
+      <p className="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mt-2">
+        S/ {balance.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+      </p>
+    </div>
 
-      {/* Historial de Aportes del Grupo */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <h2 className="text-xl font-semibold mb-4">Historial de Movimientos del Grupo</h2>
-        {transactions.length === 0 ? (
-          <p className="text-gray-500">Aún no hay movimientos en este grupo.</p>
+    {/* Panel de Aprobación del Líder */}
+    {isLeader && (
+      <div className="bg-white p-6 rounded-lg shadow border border-yellow-300 dark:bg-gray-800 dark:border-yellow-600">
+        <h2 className="text-xl font-semibold mb-4 dark:text-gray-100">Solicitudes Pendientes (Líder)</h2>
+        {requests.filter(r => r.status === 'pending').length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No hay solicitudes pendientes.</p>
         ) : (
-          <ul className="divide-y divide-gray-200">
-            {transactions.map((tx) => {
-              const memberName = group?.members.find(m => m.user_id === tx.user_id)?.name || `Usuario ID ${tx.user_id}`;
-              const isContribution = tx.type === 'CONTRIBUTION_RECEIVED';
-
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            {requests.filter(r => r.status === 'pending').map((req) => {
+              const memberName = group.members.find(m => m.user_id === req.member_user_id)?.name || `ID ${req.member_user_id}`;
               return (
-                <li key={tx.id} className="py-3">
-                  <p className={`font-medium ${isContribution ? 'text-green-600' : 'text-red-600'}`}>
-                    {isContribution ? '+' : '-'}
-                    S/ {tx.amount.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    {isContribution ? 'Aporte de' : 'Retiro aprobado para'} <strong>{memberName}</strong>
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(tx.created_at).toLocaleString('es-PE')}
-                  </p>
+                <li key={req.id} className="py-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-indigo-700 dark:text-indigo-400">
+                        {memberName} solicita S/ {req.amount.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-gray-600 italic dark:text-gray-400">
+                        Razón: "{req.reason || 'N/A'}"
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {new Date(req.created_at).toLocaleString('es-PE')}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleRejectRequest(req.id)}
+                        disabled={loading}
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded dark:bg-red-700 dark:hover:bg-red-600"
+                      >
+                        Rechazar
+                      </button>
+                      <button
+                        onClick={() => handleApproveRequest(req.id)}
+                        disabled={loading}
+                        className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded dark:bg-green-700 dark:hover:bg-green-600"
+                      >
+                        Aprobar
+                      </button>
+                    </div>
+                  </div>
                 </li>
               );
             })}
           </ul>
         )}
       </div>
+    )}
+
+    {/* Lista de Miembros */}
+    <div className="bg-white p-6 rounded-lg shadow border dark:bg-gray-800 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 dark:text-gray-100">Miembros ({group.members.length})</h2>
+      <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+        {group.members.map((member) => (
+          <li key={member.user_id} className="py-3 flex justify-between items-center">
+            <div>
+              <p className="font-medium dark:text-gray-100">
+                {member.name}
+                {member.user_id === myUserId && " (Tú)"}
+              </p>
+              <p className={`text-sm ${member.role === 'leader' ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {member.role}
+              </p>
+              <p className={`text-sm font-mono ${member.internal_balance < 0 ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-300'}`}>
+                Saldo Interno: S/ {member.internal_balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                member.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-200' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-200'
+              }`}>
+                {member.status}
+              </span>
+              {isLeader && member.user_id !== myUserId && (
+                <button
+                  onClick={() => handleKickMember(member)}
+                  disabled={loading}
+                  className="text-xs text-red-500 hover:underline disabled:opacity-50 dark:text-red-400"
+                >
+                  Eliminar
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {/* Historial de Movimientos */}
+    <div className="bg-white p-6 rounded-lg shadow border dark:bg-gray-800 dark:border-gray-700">
+      <h2 className="text-xl font-semibold mb-4 dark:text-gray-100">Historial de Movimientos del Grupo</h2>
+      {transactions.length === 0 ? (
+        <p className="text-gray-500 dark:text-gray-400">Aún no hay movimientos en este grupo.</p>
+      ) : (
+        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+          {transactions.map((tx) => {
+            const memberName = group?.members.find(m => m.user_id === tx.user_id)?.name || `Usuario ID ${tx.user_id}`;
+            const isContribution = tx.type === 'CONTRIBUTION_RECEIVED';
+
+            return (
+              <li key={tx.id} className="py-3">
+                <p className={`font-medium ${isContribution ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
+                  {isContribution ? '+' : '-'}
+                  S/ {tx.amount.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-400">
+                  {isContribution ? 'Aporte de' : 'Retiro aprobado para'} <strong>{memberName}</strong>
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {new Date(tx.created_at).toLocaleString('es-PE')}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
       
       {/* Modal de Solicitud de Retiro */}
       <RequestWithdrawalModal

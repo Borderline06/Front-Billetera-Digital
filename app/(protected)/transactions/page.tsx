@@ -62,12 +62,14 @@ export default function TransactionsPage() {
   }, []);
 
 return (
-  <main className="p-6 text-gray-900 space-y-10">
+  <main className="p-6 text-gray-900 dark:text-gray-100 space-y-10">
 
     {/* Título principal */}
     <div>
       <h1 className="text-3xl font-bold">Transferencias</h1>
-      <p className="text-gray-600">Envía dinero por celular y revisa tus movimientos recientes.</p>
+      <p className="text-gray-600 dark:text-gray-400">
+        Envía dinero por celular y revisa tus movimientos recientes.
+      </p>
     </div>
 
     {/* TITULO DEL FORMULARIO (SIN CARD) */}
@@ -86,28 +88,28 @@ return (
     </div>
 
     {/* Tabla */}
-    <div className="bg-white rounded-xl shadow-md border border-indigo-100 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-indigo-100 dark:border-gray-700 overflow-hidden">
       <table className="w-full text-left">
-        <thead className="bg-indigo-50 border-b border-indigo-100">
+        <thead className="bg-indigo-50 dark:bg-gray-700 border-b border-indigo-100 dark:border-gray-600">
           <tr>
-            <th className="p-3 font-semibold text-indigo-700">Fecha</th>
-            <th className="p-3 font-semibold text-indigo-700">Tipo</th>
-            <th className="p-3 font-semibold text-indigo-700">Monto</th>
-            <th className="p-3 font-semibold text-indigo-700">Origen/Destino</th>
-            <th className="p-3 font-semibold text-indigo-700">Estado</th>
+            <th className="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Fecha</th>
+            <th className="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Tipo</th>
+            <th className="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Monto</th>
+            <th className="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Origen/Destino</th>
+            <th className="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Estado</th>
           </tr>
         </thead>
 
-        <tbody className="divide-y">
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
           {loading ? (
             <tr>
-              <td colSpan={5} className="p-4 text-center text-gray-500">
+              <td colSpan={5} className="p-4 text-center text-gray-500 dark:text-gray-400">
                 Cargando...
               </td>
             </tr>
           ) : transactions.length === 0 ? (
             <tr>
-              <td colSpan={5} className="p-4 text-center text-gray-500">
+              <td colSpan={5} className="p-4 text-center text-gray-500 dark:text-gray-400">
                 No hay transacciones.
               </td>
             </tr>
@@ -127,18 +129,21 @@ return (
               const statusText = statusLabels[tx.status] || tx.status;
 
               return (
-                <tr key={tx.id} className="hover:bg-indigo-50/40">
-                  <td className="p-3 text-sm text-gray-600">
+                <tr
+                  key={tx.id}
+                  className="hover:bg-indigo-50/40 dark:hover:bg-gray-700/50"
+                >
+                  <td className="p-3 text-sm text-gray-600 dark:text-gray-400">
                     {new Date(tx.created_at).toLocaleString("es-PE")}
                   </td>
 
-                  <td className="p-3 font-medium">
+                  <td className="p-3 font-medium dark:text-gray-100">
                     {typeLabels[tx.type] || tx.type}
                   </td>
 
                   <td
                     className={`p-3 font-semibold ${
-                      isNegative ? "text-red-600" : "text-green-600"
+                      isNegative ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-300"
                     }`}
                   >
                     {isNegative ? "-" : "+"}
@@ -148,16 +153,16 @@ return (
                     })}
                   </td>
 
-                  <td className="p-3 text-gray-700">{description}</td>
+                  <td className="p-3 text-gray-700 dark:text-gray-200">{description}</td>
 
                   <td className="p-3">
                     <span
                       className={`text-xs px-2 py-1 rounded-full font-medium ${
                         statusText === "Completada"
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-200"
                           : statusText === "Pendiente"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
+                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-200"
+                          : "bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-200"
                       }`}
                     >
                       {statusText}
@@ -172,4 +177,5 @@ return (
     </div>
   </main>
 );
+
 }

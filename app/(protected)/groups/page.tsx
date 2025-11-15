@@ -184,90 +184,89 @@ export default function GroupsPage() {
   const myStatus = myMembership?.status || null; 
   const isLeader = myMembership?.role === 'leader';
 
-  return (
-    // --- ¡EL <Link> QUE FALTABA! ---
-    // Envuelve toda la tarjeta 'li' para que sea un enlace
-    <Link href={`/groups/${group.id}`} key={group.id}>
-      <li
-        className="bg-white shadow p-4 rounded-md border hover:shadow-lg hover:border-indigo-400 transition flex flex-col justify-between h-full cursor-pointer"
-      >
-        {/* Sección de Info */}
-        <div>
-          <h2 className="font-semibold text-lg text-indigo-700">{group.name}</h2>
-          <p className="text-sm text-gray-500">
-            {activeMembers.length} miembro(s) activo(s)
-          </p>
-        </div>
+return (
+  // --- ¡EL <Link> QUE FALTABA! ---
+  // Envuelve toda la tarjeta 'li' para que sea un enlace
+  <Link href={`/groups/${group.id}`} key={group.id}>
+    <li
+      className="bg-white dark:bg-gray-800 shadow p-4 rounded-md border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-indigo-400 transition flex flex-col justify-between h-full cursor-pointer"
+    >
+      {/* Sección de Info */}
+      <div>
+        <h2 className="font-semibold text-lg text-indigo-700 dark:text-indigo-400">{group.name}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {activeMembers.length} miembro(s) activo(s)
+        </p>
+      </div>
 
-        {/* Sección de Fecha y Botones (abajo) */}
-        <div className="flex justify-between items-center mt-4">
-          <p className="text-xs text-gray-400">
-            Creado el {new Date(group.created_at).toLocaleDateString('es-PE')}
-          </p>
+      {/* Sección de Fecha y Botones (abajo) */}
+      <div className="flex justify-between items-center mt-4">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          Creado el {new Date(group.created_at).toLocaleDateString('es-PE')}
+        </p>
 
-          {/* Contenedor de Botones */}
-          <div className="flex space-x-2">
+        {/* Contenedor de Botones */}
+        <div className="flex space-x-2">
 
-            {/* Si mi estado es PENDIENTE */}
-            {myStatus === 'pending' && (
-              <> {/* Usamos un fragmento para agrupar los botones */}
-            <button 
-              onClick={(e) => {
-                e.preventDefault(); 
-                handleAcceptInvite(group.id);
-              }}
-              className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded z-10"
-            >
-              Aceptar
-            </button>
-
-            {/* --- ¡BOTÓN RECHAZAR NUEVO! --- */}
-            <button 
-              onClick={(e) => {
-                e.preventDefault(); 
-                handleRejectInvite(group.id);
-              }}
-              className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded z-10"
-            >
-              Rechazar
-            </button>
-            {/* --- FIN BOTÓN NUEVO --- */}
-          </>
-            )}
-
-            {/* Si soy LÍDER y estoy ACTIVO */}
-            {isLeader && myStatus === 'active' && (
+          {/* Si mi estado es PENDIENTE */}
+          {myStatus === 'pending' && (
+            <> {/* Usamos un fragmento para agrupar los botones */}
               <button 
                 onClick={(e) => {
-                  e.preventDefault(); // Previene que el Link se active
-                  setSelectedGroup(group);
-                  setIsInviteModalOpen(true);
+                  e.preventDefault(); 
+                  handleAcceptInvite(group.id);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1 px-3 rounded z-10"
+                className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded z-10"
               >
-                Invitar
+                Aceptar
               </button>
-            )}
 
-            {/* Si estoy ACTIVO (todos pueden aportar) */}
-            {myStatus === 'active' && (
+              {/* --- BOTÓN RECHAZAR --- */}
               <button 
                 onClick={(e) => {
-                  e.preventDefault(); // Previene que el Link se active
-                  setSelectedGroup(group);
-                  setIsContributeModalOpen(true);
+                  e.preventDefault(); 
+                  handleRejectInvite(group.id);
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded z-10"
+                className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded z-10"
               >
-                Aportar
+                Rechazar
               </button>
-            )}
-          </div>
+            </>
+          )}
 
+          {/* Si soy LÍDER y estoy ACTIVO */}
+          {isLeader && myStatus === 'active' && (
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                setSelectedGroup(group);
+                setIsInviteModalOpen(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-xs font-bold py-1 px-3 rounded z-10"
+            >
+              Invitar
+            </button>
+          )}
+
+          {/* Si estoy ACTIVO (todos pueden aportar) */}
+          {myStatus === 'active' && (
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                setSelectedGroup(group);
+                setIsContributeModalOpen(true);
+              }}
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400 text-white text-xs font-bold py-1 px-3 rounded z-10"
+            >
+              Aportar
+            </button>
+          )}
         </div>
-      </li>
-    </Link>
-  );
+
+      </div>
+    </li>
+  </Link>
+);
 })}
         </ul>
       )}
