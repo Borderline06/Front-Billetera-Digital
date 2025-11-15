@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Hook para leer la URL y redirigir
 import Link from 'next/link';
 import RequestWithdrawalModal from './RequestWithdrawalModal'; // Importamos el modal de solicitud
+import LeaderWithdrawalModal from './LeaderWithdrawalModal';
 
 // --- Definimos las plantillas de datos ---
 interface GroupMember {
@@ -65,6 +66,7 @@ export default function GroupDetailPage() {
   const [isLeader, setIsLeader] = useState(false); 
   
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isLeaderWithdrawalModalOpen, setIsLeaderWithdrawalModalOpen] = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('pixel-token') : null;
   const myUserId = typeof window !== 'undefined' ? parseInt(localStorage.getItem('pixel-user-id') || '0') : 0;
@@ -282,6 +284,19 @@ export default function GroupDetailPage() {
               Solicitar Retiro
             </button>
           )}
+
+                {/* --- ¡NUEVO BOTÓN DE LÍDER! --- */}
+            {isLeader && ( 
+            <button 
+                onClick={() => setIsLeaderWithdrawalModalOpen(true)}
+                className="text-sm bg-blue-100 text-blue-700 font-medium py-1 px-3 rounded-lg hover:bg-blue-200"
+            >
+                Retiro de Líder
+            </button>
+            )}
+
+
+
         </div>
         <p className="text-4xl font-bold text-indigo-700 mt-2">
           S/ {balance.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
@@ -415,6 +430,18 @@ export default function GroupDetailPage() {
           fetchGroupData(); // Refresca todo
         }}
       />
+
+
+
+            {/* --- ¡AÑADE ESTE MODAL! --- */}
+        <LeaderWithdrawalModal
+        isOpen={isLeaderWithdrawalModalOpen}
+        onClose={() => setIsLeaderWithdrawalModalOpen(false)}
+        group={{ id: group.id, name: group.name }}
+        onWithdrawalSuccess={() => {
+            fetchGroupData(); // Refresca todo
+        }}
+        />
     </div>
   );
 }
