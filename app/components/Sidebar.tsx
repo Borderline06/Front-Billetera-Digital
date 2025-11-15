@@ -34,7 +34,7 @@ export default function Sidebar() {
     { href: '/dashboard', label: 'Inicio', icon: <Home size={18} /> },
     { href: '/transactions', label: 'Transacciones', icon: <CreditCard size={18} /> },
     { href: '/groups', label: 'Grupos', icon: <Users size={18} /> },
-    { href: '/settings', label: 'Configuración', icon: <Settings size={18} /> },
+    { href: '/configuracion', label: 'Configuración', icon: <Settings size={18} /> },
   ];
 
   return (
