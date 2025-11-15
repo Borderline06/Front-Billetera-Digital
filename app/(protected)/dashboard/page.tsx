@@ -14,7 +14,7 @@ import {
 import { FaPlusSquare, FaCreditCard, FaPlus, FaMinus, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { TbSend } from 'react-icons/tb';
 
-import DepositModal from './depositmodal';
+import LoanModal from './depositmodal';
 
 interface DailyBalance {
   date: string;
@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const [dailyBalance, setDailyBalance] = useState<DailyBalance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('pixel-token') : null;
 
@@ -116,10 +116,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* MODAL DE DEPÓSITO */}
-      <DepositModal
-        isOpen={isDepositOpen}
-        onClose={() => setIsDepositOpen(false)}
-        onDepositSuccess={refreshData}
+            <LoanModal
+        isOpen={isLoanModalOpen}
+        onClose={() => setIsLoanModalOpen(false)}
+        onLoanSuccess={refreshData}
       />
 
       {/* Resumen superior */}
@@ -148,11 +148,11 @@ export default function DashboardPage() {
       <div className="flex gap-4 items-center">
         {/* Depositar */}
         <button
-          onClick={() => setIsDepositOpen(true)}
+          onClick={() => setIsLoanModalOpen(true)}
           className="flex items-center gap-2 bg-indigo-900 text-white px-5 py-2 rounded-lg font-medium hover:bg-indigo-800"
         >
           <FaCreditCard className="text-lg" />
-          Recargar Saldo (Sim)
+          Pedir Préstamo (Sim)
         </button>
 
         {/* Retirar */}
