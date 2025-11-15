@@ -53,6 +53,7 @@ export default function LoginPage() {
       console.log('Login exitoso:', data);
       setWelcomeMessage(`¡Bienvenido! Tu token es: ${data.access_token.substring(0, 15)}...`);
       localStorage.setItem('pixel-token', data.access_token);
+      localStorage.setItem('pixel-user-id', data.user_id.toString());
       // Aquí es donde guardarías el token (lo veremos después)
       // Redirigir al Dashboard
       router.push('/dashboard');

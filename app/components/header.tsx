@@ -2,38 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, Moon, Sun } from "lucide-react";
+import { Search, Bell } from "lucide-react";
+import ThemeSwitch from "../components/ThemeSwitch";
 
 export default function AppHeader() {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [dark, setDark] = useState(false);
   const router = useRouter();
-
-  // Cargar tema guardado
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    const isDark = saved === "dark";
-
-    setDark(isDark);
-
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-  // Activar modo oscuro
-  const toggleDark = () => {
-    const newMode = !dark;
-    setDark(newMode);
-
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
 
   // Cargar usuario
   useEffect(() => {
@@ -73,16 +47,11 @@ export default function AppHeader() {
         />
       </div>
 
-      {/* Notificaciones + DarkMode + Avatar */}
+      {/* Notificaciones + ThemeSwitch + Avatar */}
       <div className="flex items-center space-x-6">
 
-        {/* BOTÓN DE MODO OSCURO */}
-        <button
-          onClick={toggleDark}
-          className="p-2 rounded-lg border text-sm border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-        >
-          {dark ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        {/* MODO OSCURO FINAL */}
+        <ThemeSwitch />
 
         {/* Notificaciones */}
         <div className="relative">

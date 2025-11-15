@@ -74,8 +74,14 @@ export default function RegisterPage() {
       console.log('Registro exitoso, esperando verificación:', data);
       setShowVerificationModal(true); 
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof err === 'string') {
+        setError(err);
+      } else {
+        setError('Error desconocido');
+      }
     } finally {
       setLoading(false);
     }

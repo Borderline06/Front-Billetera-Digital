@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link'
 import CreateGroupModal from './CreateGroupModal';
 import ContributeModal from './ContributeModal';
+import InviteModal from './InviteModal';
 
 interface GroupMember {
   user_id: number;
   role: 'leader' | 'member';
   group_id: number;
+  status: 'pending' | 'active';
 }
 
 interface Group {
@@ -27,6 +30,8 @@ export default function GroupsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [myUserId, setMyUserId] = useState<number | null>(null);
 
   const fetchGroups = async () => {
     try {
@@ -59,81 +64,90 @@ export default function GroupsPage() {
   };
 
   useEffect(() => {
+    // --- ¡AÑADE ESTO! ---
+    // Lee el ID del usuario logueado desde localStorage
+    const storedUserId = localStorage.getItem('pixel-user-id');
+    if (storedUserId) {
+      setMyUserId(parseInt(storedUserId, 10));
+    }
+    // --- FIN DEL BLOQUE ---
     fetchGroups();
   }, []);
 
-  // ================================
-  // 1️⃣ FUNCION CONTRIBUIR
-  // ================================
-  const contributeToGroup = async (groupId: number) => {
-    const token = localStorage.getItem("pixel-token");
-    const userId = Number(localStorage.getItem("pixel-user-id")); // AJUSTA SI TU USER VA EN JWT
-    const amount = Number(prompt("¿Cuánto deseas contribuir?"));
+      // --- ¡AÑADE ESTA NUEVA FUNCIÓN! ---
+    const handleAcceptInvite = async (groupId: number) => {
+      const token = localStorage.getItem('pixel-token');
+      if (!token) {
+        setError('No estás autenticado.');
+        return;
+      }
+      // No seteamos 'loading' para no bloquear toda la UI,
+      // podríamos setear un estado de "aceptando" para ese grupo
 
-    if (!amount || amount <= 0) return alert("Monto inválido.");
+      try {
+        const response = await fetch(`${API_GATEWAY_URL}/groups/me/accept/${groupId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            // No se necesita Content-Type, no hay body
+          },
+        });
 
-    const idempotencyKey = crypto.randomUUID();
+        const data = await response.json();
 
-    try {
-      const response = await fetch(`${API_GATEWAY_URL}/ledger/contribute`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "Idempotency-Key": idempotencyKey
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          group_id: groupId,
-          amount: amount
-        })
-      });
+        if (!response.ok) {
+          throw new Error(data.detail || 'Error al aceptar la invitación');
+        }
 
-      const data = await response.json();
+        // ¡Éxito! Refrescamos la lista de grupos
+        fetchGroups(); 
 
-      if (!response.ok) {
-        return alert(`Error: ${data.detail}`);
+      } catch (err: any) {
+        setError(err.message); // Muestra el error en la parte superior
+      }
+    };
+    // --- FIN DE LA NUEVA FUNCIÓN ---
+
+
+        // --- ¡AÑADE ESTA NUEVA FUNCIÓN! ---
+    const handleRejectInvite = async (groupId: number) => {
+      const token = localStorage.getItem('pixel-token');
+      if (!token) {
+        setError('No estás autenticado.');
+        return;
       }
 
-      alert("Contribución enviada correctamente.");
-    } catch (error) {
-      console.error("Error al contribuir:", error);
-      alert("Error al procesar el aporte.");
-    }
-  };
-
-  // ================================
-  // 2️⃣ FUNCION INVITAR
-  // ================================
-  const inviteUser = async (groupId: number) => {
-    const phone = prompt("Ingresa el número de celular del usuario a invitar:");
-
-    if (!phone) return;
-
-    const token = localStorage.getItem("pixel-token");
-
-    try {
-      const response = await fetch(`${API_GATEWAY_URL}/groups/${groupId}/invite`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ phone_number: phone })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return alert(`Error invitando: ${data.detail}`);
+      // Preguntar al usuario si está seguro
+      if (!window.confirm("¿Estás seguro de que quieres rechazar esta invitación?")) {
+        return;
       }
 
-      alert("Usuario invitado correctamente.");
-    } catch (error) {
-      console.error("Error al invitar:", error);
-      alert("No se pudo enviar la invitación.");
-    }
-  };
+      try {
+        const response = await fetch(`${API_GATEWAY_URL}/groups/me/reject/${groupId}`, {
+          method: 'DELETE', // <-- ¡Método DELETE!
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          // response.json() falla en un 204, así que leemos texto
+          const text = await response.text();
+          let detail = "Error al rechazar la invitación";
+          try {
+            detail = JSON.parse(text).detail;
+          } catch (e) {}
+          throw new Error(detail);
+        }
+
+        // ¡Éxito! (El 204 no tiene body) Refrescamos la lista de grupos
+        fetchGroups(); 
+
+      } catch (err: any) {
+        setError(err.message);
+      }
+    };
+    // --- FIN DE LA NUEVA FUNCIÓN ---
 
   return (
     <div className="space-y-6">
@@ -157,49 +171,104 @@ export default function GroupsPage() {
         <p className="text-gray-600">Aún no tienes grupos creados.</p>
       ) : (
         <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {groups.map((group) => (
-            <li
-              key={group.id}
-              className="bg-white shadow p-4 rounded-md border hover:shadow-lg transition flex flex-col justify-between"
-            >
-              {/* Sección de Info */}
-              <div>
-                <h2 className="font-semibold text-lg text-indigo-700">{group.name}</h2>
-                <p className="text-sm text-gray-500">
-                  {group.members.length} miembro(s)
-                </p>
-              </div>
+          
 
-              {/* Sección de Fecha (abajo) */}
-              <p className="text-xs text-gray-400 mt-4">
-                Creado el {new Date(group.created_at).toLocaleDateString('es-PE')}
-              </p>
+                {/* REEMPLAZA TU BLOQUE .map() CON ESTO: */}
 
-              {/* ==== BOTONES AQUI ==== */}
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => inviteUser(group.id)}
-                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Invitar
-                </button>
+        {/* REEMPLAZA TU BLOQUE .map() CON ESTO: */}
 
-                            {/* --- ¡BOTÓN NUEVO! --- */}
+{groups.map((group) => {
+  // --- Lógica para esta tarjeta ---
+  const activeMembers = group.members.filter(m => m.status === 'active');
+  const myMembership = group.members.find(m => m.user_id === myUserId);
+  const myStatus = myMembership?.status || null; 
+  const isLeader = myMembership?.role === 'leader';
+
+  return (
+    // --- ¡EL <Link> QUE FALTABA! ---
+    // Envuelve toda la tarjeta 'li' para que sea un enlace
+    <Link href={`/groups/${group.id}`} key={group.id}>
+      <li
+        className="bg-white shadow p-4 rounded-md border hover:shadow-lg hover:border-indigo-400 transition flex flex-col justify-between h-full cursor-pointer"
+      >
+        {/* Sección de Info */}
+        <div>
+          <h2 className="font-semibold text-lg text-indigo-700">{group.name}</h2>
+          <p className="text-sm text-gray-500">
+            {activeMembers.length} miembro(s) activo(s)
+          </p>
+        </div>
+
+        {/* Sección de Fecha y Botones (abajo) */}
+        <div className="flex justify-between items-center mt-4">
+          <p className="text-xs text-gray-400">
+            Creado el {new Date(group.created_at).toLocaleDateString('es-PE')}
+          </p>
+
+          {/* Contenedor de Botones */}
+          <div className="flex space-x-2">
+
+            {/* Si mi estado es PENDIENTE */}
+            {myStatus === 'pending' && (
+              <> {/* Usamos un fragmento para agrupar los botones */}
             <button 
-              onClick={() => {
-                setSelectedGroup(group);
-                setIsContributeModalOpen(true);
+              onClick={(e) => {
+                e.preventDefault(); 
+                handleAcceptInvite(group.id);
               }}
-              className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded"
+              className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded z-10"
             >
-              Aportar
+              Aceptar
+            </button>
+
+            {/* --- ¡BOTÓN RECHAZAR NUEVO! --- */}
+            <button 
+              onClick={(e) => {
+                e.preventDefault(); 
+                handleRejectInvite(group.id);
+              }}
+              className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded z-10"
+            >
+              Rechazar
             </button>
             {/* --- FIN BOTÓN NUEVO --- */}
-              </div>
+          </>
+            )}
 
-              {/* (Aquí pondremos los botones de Aportar/Invitar/Ver) */}
-            </li>
-          ))}
+            {/* Si soy LÍDER y estoy ACTIVO */}
+            {isLeader && myStatus === 'active' && (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault(); // Previene que el Link se active
+                  setSelectedGroup(group);
+                  setIsInviteModalOpen(true);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1 px-3 rounded z-10"
+              >
+                Invitar
+              </button>
+            )}
+
+            {/* Si estoy ACTIVO (todos pueden aportar) */}
+            {myStatus === 'active' && (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault(); // Previene que el Link se active
+                  setSelectedGroup(group);
+                  setIsContributeModalOpen(true);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded z-10"
+              >
+                Aportar
+              </button>
+            )}
+          </div>
+
+        </div>
+      </li>
+    </Link>
+  );
+})}
         </ul>
       )}
 
@@ -220,6 +289,19 @@ export default function GroupsPage() {
             fetchGroups(); // Refresca la lista de grupos
             // Idealmente, también refrescaría el dashboard,
             // pero por ahora esto es suficiente.
+          }}
+        />
+      )}
+      {/* --- FIN DEL BLOQUE --- */}
+
+      {/* --- ¡AÑADE ESTE BLOQUE! --- */}
+      {selectedGroup && (
+        <InviteModal
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          group={selectedGroup}
+          onInviteSuccess={() => {
+            fetchGroups(); // Refresca la lista de grupos
           }}
         />
       )}
