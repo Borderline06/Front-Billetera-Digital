@@ -301,7 +301,6 @@ export default function GroupDetailPage() {
           S/ {balance.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
         </p>
       </div>
-    )}
 
     {/* Saldo del Grupo */}
     <div className="bg-white p-6 rounded-lg shadow border dark:bg-gray-800 dark:border-gray-700">
