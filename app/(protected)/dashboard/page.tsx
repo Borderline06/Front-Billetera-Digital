@@ -15,6 +15,7 @@ import { FaPlusSquare, FaCreditCard, FaPlus, FaMinus, FaArrowUp, FaArrowDown } f
 import { TbSend } from 'react-icons/tb';
 
 import LoanModal from './depositmodal';
+const API_GATEWAY_URL = 'http://localhost:8080';
 
 interface DailyBalance {
   date: string;
@@ -29,14 +30,23 @@ interface Transaction {
   created_at: string;
   status: string; // ¡Añadido! El backend nos envía el estado real
 }
+
+interface Loan {
+  id: number;
+  outstanding_balance: number;
+  status: 'ACTIVE' | 'PAID';
+  created_at: string;
+}
 // --- FIN DE LA CORRECCIÓN ---
 
 export default function DashboardPage() {
   const [balance, setBalance] = useState<number>(0);
   const [dailyBalance, setDailyBalance] = useState<DailyBalance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [activeLoan, setActiveLoan] = useState<Loan | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('pixel-token') : null;
 
@@ -80,6 +90,7 @@ export default function DashboardPage() {
       const txData = await txRes.json();
 
       setBalance(balanceData.balance ?? 0);
+      setActiveLoan(balanceData.active_loan || null);
 
       const parsedDaily = Array.isArray(dailyData) ? dailyData : dailyData?.daily_balance || [];
       setDailyBalance(parsedDaily);
@@ -91,6 +102,44 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // ... (después de 'refreshData')
+
+// --- ¡NUEVA FUNCIÓN PARA PAGAR! ---
+const handlePayLoan = async () => {
+  if (!activeLoan) return;
+  if (!window.confirm(`¿Estás seguro de que quieres pagar S/ ${activeLoan.outstanding_balance}? El monto se debitará de tu saldo BDI.`)) {
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+  const token = localStorage.getItem('pixel-token');
+
+  try {
+    const response = await fetch(`${API_GATEWAY_URL}/pay-loan`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Idempotency-Key': `pay-${activeLoan.id}-${Date.now()}` // Key de idempotencia simple
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      // ¡Aquí mostrará "Fondos insuficientes"!
+      throw new Error(data.detail || 'Error al pagar el préstamo');
+    }
+
+    alert("¡Deuda pagada exitosamente!");
+    refreshData(); // Refresca todo el dashboard
+
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     if (token) { // Solo ejecuta si el token existe
@@ -143,6 +192,35 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+
+      {/* --- ¡NUEVA TARJETA DE DEUDA! --- */}
+    {activeLoan && (
+      <div className="md:col-span-3 bg-white rounded-xl p-6 border border-yellow-400 shadow-inner">
+        <div className="flex justify-between items-center">
+          <h3 className="text-gray-500 text-sm">PRÉSTAMO ACTIVO</h3>
+          <span className="text-xs px-2 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700">
+            DEUDA PENDIENTE
+          </span>
+        </div>
+        <p className="text-3xl font-bold text-red-600 mt-2">
+          S/ {activeLoan.outstanding_balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          Préstamo solicitado el {new Date(activeLoan.created_at).toLocaleDateString('es-PE')}
+        </p>
+          {/* --- ¡NUEVO BOTÓN DE PAGO! --- */}
+      <button
+        onClick={handlePayLoan}
+        disabled={loading}
+        className="mt-4 w-full bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 disabled:bg-gray-400"
+      >
+        Pagar Deuda Ahora
+      </button>
+      {/* --- FIN DEL BOTÓN --- */}
+      </div>
+    )}
+    {/* --- FIN DE LA NUEVA TARJETA --- */}
 
       {/* Botones: Depositar / Retirar / Enviar */}
       <div className="flex gap-4 items-center">

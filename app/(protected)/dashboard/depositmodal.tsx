@@ -51,11 +51,13 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
         body: JSON.stringify({ amount: parseFloat(amount) }),
       });
 
-      const data = await response.json();
+      
 
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.detail || 'Error al procesar el préstamo');
       }
+      const data = await response.json();
 
       // ¡ÉXITO!
       console.log('Préstamo exitoso:', data);
