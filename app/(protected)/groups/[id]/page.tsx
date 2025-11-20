@@ -294,6 +294,13 @@ export default function GroupDetailPage() {
           </div>
         </div>
 
+              {error && (
+  <div className="bg-rose-100/80 dark:bg-rose-900/40 border border-rose-300 dark:border-rose-800 
+                  text-rose-700 dark:text-rose-300 px-4 py-3 rounded-xl shadow-sm">
+    <strong className="font-semibold">¡Error! </strong>
+    <span className="ml-1">{error}</span>
+  </div>
+)}
         {/* Grid Principal */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Columna Izquierda - Saldo y Acciones Rápidas */}
