@@ -2,19 +2,17 @@
 
 import Sidebar from "./Sidebar";
 import AppHeader from "./header";
-import {Providers} from "../provider";
-
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Providers>
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <Sidebar />
-      <main className="flex-1 p-6">
+      <div className="flex-1 flex flex-col min-w-0">
         <AppHeader />
-        {children}
-      </main>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
     </div>
-    </Providers>
   );
 }
