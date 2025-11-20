@@ -18,7 +18,6 @@ export default function SecuritySettings() {
       ...passwordData,
       [e.target.name]: e.target.value,
     });
-    // Limpiar errores cuando el usuario empiece a escribir
     if (error) setError(null);
   };
 
@@ -27,7 +26,6 @@ export default function SecuritySettings() {
     setError(null);
     setSuccess(null);
 
-    // Validaciones
     if (passwordData.new_password !== passwordData.confirm_password) {
       setError('Las nuevas contraseñas no coinciden');
       return;
@@ -39,34 +37,43 @@ export default function SecuritySettings() {
     }
 
     setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      // Primero necesitamos obtener el user_id del token
-      const verifyResponse = await fetch('http://localhost:8000/verify', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
 
-      if (!verifyResponse.ok) {
-        throw new Error('Token inválido');
+    try {
+      const token = localStorage.getItem('pixel-token');
+      if (!token) {
+        throw new Error('No se encontró token. Inicia sesión nuevamente.');
       }
 
-      // Nota: En tu backend actual no existe el endpoint para cambiar contraseña
-      // Esto es un placeholder para cuando lo implementes
-      setSuccess('Funcionalidad de cambio de contraseña próximamente disponible');
-      
-      // Simular éxito
+      const response = await fetch('http://localhost:8000/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          current_password: passwordData.current_password,
+          new_password: passwordData.new_password,
+          confirm_password: passwordData.confirm_password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al cambiar la contraseña');
+      }
+
+      setSuccess(data.message || 'Contraseña cambiada correctamente');
+
       setTimeout(() => {
         setShowChangePassword(false);
         setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
         setSuccess(null);
-      }, 2000);
+      }, 1500);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error changing password:', error);
-      setError(error instanceof Error ? error.message : 'Error al cambiar la contraseña');
+      setError(error.message || 'Error al cambiar la contraseña');
     } finally {
       setLoading(false);
     }
