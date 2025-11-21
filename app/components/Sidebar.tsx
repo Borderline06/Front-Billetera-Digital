@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, CreditCard, Users, Settings, LogOut, PieChart, Wallet, Calendar, FileText, Stethoscope, Activity, X, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { FaUserCircle } from 'react-icons/fa';
 
 interface User {
   name: string;
@@ -36,7 +37,7 @@ export default function Sidebar() {
         email: data.email,
         age: data.age,
         phone: data.phone,
-        avatar: data.avatar || "/avatar.png"
+        avatar: data.avatar
       }))
       .catch(() => {});
   }, []);

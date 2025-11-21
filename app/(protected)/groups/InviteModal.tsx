@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Phone, UserPlus, Users, Shield, Mail, CheckCircle } from 'lucide-react';
+import { apiClient } from '../../lib/api';
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -10,19 +11,11 @@ interface InviteModalProps {
   group: { id: number; name: string }; 
 }
 
-export default function InviteModal({
-  isOpen,
-  onClose,
-  onInviteSuccess,
-  group
-}: InviteModalProps) {
-
+export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }: InviteModalProps) {
   const [phoneToInvite, setPhoneToInvite] = useState(''); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  const API_GATEWAY_URL = 'http://localhost:8080';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,46 +23,19 @@ export default function InviteModal({
     setError(null);
     setSuccess(false);
 
-    if (!phoneToInvite.trim()) {
-      setError('Por favor, ingresa un número de celular.');
-      setLoading(false);
-      return;
-    }
-
-    // Validar formato básico de teléfono peruano (9 dígitos)
-    const phoneRegex = /^9\d{8}$/;
-    if (!phoneRegex.test(phoneToInvite.replace(/\D/g, ''))) {
-      setError('Por favor, ingresa un número de celular válido (9 dígitos, empezando con 9).');
-      setLoading(false);
-      return;
-    }
-
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
+    const cleanPhone = phoneToInvite.replace(/\D/g, '');
+    if (!cleanPhone.trim() || !/^9\d{8}$/.test(cleanPhone)) {
+      setError('Ingresa un celular válido (9 dígitos, empieza con 9).');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/groups/${group.id}/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          phone_number_to_invite: phoneToInvite.replace(/\D/g, '')
-        }),
+      await apiClient.post(`/groups/${group.id}/invite`, {
+        phone_number_to_invite: cleanPhone
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al invitar al miembro');
-      }
-
-      console.log('Invitación exitosa:', data);
+      console.log('Invitación exitosa');
       setSuccess(true);
       setTimeout(() => {
         onInviteSuccess();

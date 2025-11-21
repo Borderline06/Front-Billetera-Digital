@@ -31,7 +31,7 @@ export default function AppHeader() {
         email: data.email,
         age: data.age,
         phone: data.phone,
-        avatar: data.avatar || "/avatar.png"
+        avatar: data.avatar 
       }))
       .catch(() => {});
   }, []);

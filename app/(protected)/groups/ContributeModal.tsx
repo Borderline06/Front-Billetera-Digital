@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { X, DollarSign, Users, Gift, Shield, TrendingUp } from 'lucide-react';
+import { apiClient } from '../../lib/api'; // 👈 Importar
 
 interface ContributeModalProps {
   isOpen: boolean;
@@ -11,17 +12,10 @@ interface ContributeModalProps {
   group: { id: number; name: string };
 }
 
-export default function ContributeModal({
-  isOpen,
-  onClose,
-  onContributeSuccess,
-  group
-}: ContributeModalProps) {
+export default function ContributeModal({ isOpen, onClose, onContributeSuccess, group }: ContributeModalProps) {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const API_GATEWAY_URL = 'http://localhost:8080';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,14 +24,7 @@ export default function ContributeModal({
 
     const contributeAmount = parseFloat(amount);
     if (isNaN(contributeAmount) || contributeAmount <= 0) {
-      setError('Por favor, ingresa un monto válido.');
-      setLoading(false);
-      return;
-    }
-
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
+      setError('Ingresa un monto válido.');
       setLoading(false);
       return;
     }
@@ -45,26 +32,19 @@ export default function ContributeModal({
     const idempotencyKey = uuidv4();
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/ledger/contribute`, {
+      // Usamos apiClient.post pasando el header de idempotencia en opciones
+      await apiClient.request('/ledger/contribute', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': idempotencyKey,
-        },
         body: JSON.stringify({
           amount: contributeAmount,
           group_id: group.id
         }),
+        headers: {
+          'Idempotency-Key': idempotencyKey // Header especial
+        }
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al procesar el aporte');
-      }
-
-      console.log('Aporte a grupo exitoso:', data);
+      console.log('Aporte exitoso');
       onContributeSuccess();
       onClose();
       setAmount('');
@@ -77,7 +57,7 @@ export default function ContributeModal({
   };
 
   if (!isOpen) return null;
-
+ 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-md border border-sky-100 dark:border-slate-700 overflow-hidden animate-fade-in-up">

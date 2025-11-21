@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Users, Plus, Shield, UserCheck, Sparkles } from 'lucide-react';
+import { apiClient } from '../../lib/api'; 
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -14,49 +15,22 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    if (!groupName.trim()) {
-      setError('El nombre del grupo no puede estar vacío.');
-      setLoading(false);
-      return;
-    }
-
-    if (groupName.length < 3) {
-      setError('El nombre del grupo debe tener al menos 3 caracteres.');
-      setLoading(false);
-      return;
-    }
-
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
+    if (!groupName.trim() || groupName.length < 3) {
+      setError('El nombre debe tener al menos 3 caracteres.');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/groups`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ 
-          name: groupName.trim()
-        }),
+      // Llamada limpia al backend
+      const data = await apiClient.post('/groups', { 
+        name: groupName.trim() 
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al crear el grupo');
-      }
 
       console.log('Grupo creado:', data);
       onGroupCreated();
@@ -71,6 +45,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   };
 
   if (!isOpen) return null;
+
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">

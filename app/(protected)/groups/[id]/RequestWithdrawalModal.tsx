@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { X, DollarSign, FileText, Shield, Users, Send, Clock } from 'lucide-react';
+import { apiClient } from '../../../lib/api'; 
 
 interface RequestModalProps {
   isOpen: boolean;
@@ -9,47 +10,22 @@ interface RequestModalProps {
   group: { id: number; name: string };
 }
 
-export default function RequestWithdrawalModal({
-  isOpen,
-  onClose,
-  onRequestSuccess,
-  group
-}: RequestModalProps) {
+export default function RequestWithdrawalModal({ isOpen, onClose, onRequestSuccess, group }: RequestModalProps) {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
-      setLoading(false);
-      return;
-    }
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/groups/${group.id}/request-withdrawal`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          reason: reason
-        }),
+      await apiClient.post(`/groups/${group.id}/request-withdrawal`, {
+        amount: parseFloat(amount),
+        reason: reason
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al crear la solicitud');
-      }
 
       onRequestSuccess();
       onClose();

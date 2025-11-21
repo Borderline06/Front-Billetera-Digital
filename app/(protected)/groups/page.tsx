@@ -5,8 +5,11 @@ import Link from 'next/link';
 import CreateGroupModal from './CreateGroupModal';
 import ContributeModal from './ContributeModal';
 import InviteModal from './InviteModal';
-import { FaUsers, FaUserPlus, FaPlus, FaClock, FaCheck, FaTimes, FaGift, FaShare } from 'react-icons/fa';
+import { FaUsers, FaPlus, FaClock, FaCheck, FaTimes, FaGift, FaShare } from 'react-icons/fa';
+// 👇 Importación corregida (ajusta los ../ según necesites, aquí subimos 3 niveles)
+import { apiClient } from '../../lib/api'; 
 
+// ... (Tus interfaces GroupMember y Group se quedan igual aquí) ...
 interface GroupMember {
   user_id: number;
   role: 'leader' | 'member';
@@ -22,8 +25,6 @@ interface Group {
   members: GroupMember[];
 }
 
-const API_GATEWAY_URL = 'http://localhost:8080';
-
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,31 +35,15 @@ export default function GroupsPage() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [myUserId, setMyUserId] = useState<number | null>(null);
 
+  // --- 1. Cargar Grupos ---
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('pixel-token');
-      if (!token) {
-        setError('No estás autenticado.');
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${API_GATEWAY_URL}/groups/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al obtener los grupos');
-      }
-
+      // apiClient.get ya devuelve los datos limpios
+      const data = await apiClient.get('/groups/me');
       setGroups(data);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error al cargar grupos');
     } finally {
       setLoading(false);
     }
@@ -66,73 +51,32 @@ export default function GroupsPage() {
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('pixel-user-id');
-    if (storedUserId) {
-      setMyUserId(parseInt(storedUserId, 10));
-    }
+    if (storedUserId) setMyUserId(parseInt(storedUserId, 10));
     fetchGroups();
   }, []);
 
+  // --- 2. Aceptar Invitación ---
   const handleAcceptInvite = async (groupId: number) => {
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
-      return;
-    }
-
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/groups/me/accept/${groupId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al aceptar la invitación');
-      }
-
-      fetchGroups();
+      await apiClient.post(`/groups/me/accept/${groupId}`, {});
+      fetchGroups(); // Recargar lista
     } catch (err: any) {
-      setError(err.message);
+      alert(err.message);
     }
   };
 
+  // --- 3. Rechazar Invitación ---
   const handleRejectInvite = async (groupId: number) => {
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
-      return;
-    }
-
-    if (!window.confirm("¿Estás seguro de que quieres rechazar esta invitación?")) {
-      return;
-    }
-
+    if (!window.confirm("¿Estás seguro de que quieres rechazar esta invitación?")) return;
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/groups/me/reject/${groupId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        let detail = "Error al rechazar la invitación";
-        try {
-          detail = JSON.parse(text).detail;
-        } catch (e) {}
-        throw new Error(detail);
-      }
-
+      await apiClient.delete(`/groups/me/reject/${groupId}`);
       fetchGroups();
     } catch (err: any) {
-      setError(err.message);
+      alert(err.message);
     }
   };
 
+  // ... (Aquí sigue tu 'return (...)', ese déjalo tal cual, funcionará perfecto con estas funciones)
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-900/30 p-6">
       <div className="max-w-7xl mx-auto">

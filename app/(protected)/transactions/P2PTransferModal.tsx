@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Phone, DollarSign, Send, Shield, Zap, UserCheck } from 'lucide-react';
-
+import { apiClient } from '../../lib/api';
 interface P2PTransferModalProps {
   onTransferSuccess: () => void;
 }
@@ -15,8 +15,6 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -24,23 +22,15 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
     setSuccess(false);
 
     const transferAmount = parseFloat(amount);
+    const cleanPhone = phone.replace(/\D/g, '');
+
     if (isNaN(transferAmount) || transferAmount <= 0) {
-      setError('Por favor, ingresa un monto válido.');
+      setError('Monto inválido.');
       setLoading(false);
       return;
     }
-
-    // Validar formato básico de teléfono peruano
-    const phoneRegex = /^9\d{8}$/;
-    if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
-      setError('Por favor, ingresa un número de celular válido (9 dígitos, empezando con 9).');
-      setLoading(false);
-      return;
-    }
-
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
+    if (!/^9\d{8}$/.test(cleanPhone)) {
+      setError('Celular inválido.');
       setLoading(false);
       return;
     }
@@ -48,24 +38,17 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
     const idempotencyKey = uuidv4();
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/ledger/transfer/p2p`, {
+      // Usamos request para pasar el header extra
+      await apiClient.request('/ledger/transfer/p2p', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': idempotencyKey, 
-        },
         body: JSON.stringify({ 
           amount: transferAmount,
-          destination_phone_number: phone.replace(/\D/g, '')
+          destination_phone_number: cleanPhone
         }),
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al procesar la transferencia');
-      }
 
       setSuccess(true);
       setTimeout(() => {
@@ -81,6 +64,7 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
       setLoading(false);
     }
   };
+
 
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-sky-100 dark:border-slate-700 overflow-hidden w-full max-w-md">
