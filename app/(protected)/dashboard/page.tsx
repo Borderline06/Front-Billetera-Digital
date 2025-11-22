@@ -128,7 +128,8 @@ export default function DashboardPage() {
       {/* 2. En refreshData, haz: setAccountData(balanceData); */}
 
       {/* Y luego renderiza esto: */}
-      {accountData?.active_loan && accountData.active_loan.status === 'active' && (
+      {/* 👇 CAMBIO CRÍTICO: Usar .loan en lugar de .active_loan */}
+      {accountData?.loan && accountData.loan.status === 'active' && (
         <div className="mt-6 bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl p-6 text-white shadow-xl flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
@@ -136,7 +137,8 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-orange-100 text-sm font-medium">Deuda con el Banco</p>
-              <p className="text-3xl font-bold">S/ {accountData.active_loan.outstanding_balance}</p>
+              {/* 👇 AQUÍ TAMBIÉN: .loan */}
+              <p className="text-3xl font-bold">S/ {accountData.loan.outstanding_balance}</p>
             </div>
           </div>
           <button 
@@ -144,7 +146,7 @@ export default function DashboardPage() {
               if(!confirm("¿Pagar deuda completa con tu saldo?")) return;
               try {
                 await apiClient.post('/pay-loan', {});
-                refreshData();
+                refreshData(); // Recargar para quitar la tarjeta
                 showNotification("¡Deuda pagada!", "success");
               } catch(e: any) {
                 showNotification(e.message, "error");
