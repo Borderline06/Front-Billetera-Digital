@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Para redirigir al login
+// 👇 Importaciones corregidas (3 niveles hacia arriba)
+import { apiClient } from '../../lib/api';
+import { useNotification } from '../../contexts/NotificationContext';
 
 interface PrivacySettings {
   profileVisibility: string;
@@ -9,9 +13,21 @@ interface PrivacySettings {
 }
 
 export default function PrivacySettings() {
+  // 👇 Inicializamos los hooks aquí
+  const { showNotification } = useNotification();
+  const router = useRouter();
+
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(() => {
-    const savedPrivacy = localStorage.getItem('privacySettings');
-    return savedPrivacy ? JSON.parse(savedPrivacy) : {
+    // Evitamos error de hidratación verificando window
+    if (typeof window !== 'undefined') {
+      const savedPrivacy = localStorage.getItem('privacySettings');
+      return savedPrivacy ? JSON.parse(savedPrivacy) : {
+        profileVisibility: 'friends',
+        dataSharing: false,
+        personalizedAds: false,
+      };
+    }
+    return {
       profileVisibility: 'friends',
       dataSharing: false,
       personalizedAds: false,
@@ -46,16 +62,31 @@ export default function PrivacySettings() {
     link.download = `pixel-money-data-${new Date().getTime()}.json`;
     link.click();
     
-    alert('Datos exportados exitosamente');
+    showNotification('Datos exportados exitosamente', 'success'); // Usamos notificación bonita
   };
 
-  const handleDeleteAccount = () => {
-    if (confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer y se perderán todos tus datos.')) {
-      // Aquí iría la llamada al backend para eliminar la cuenta
-      alert('Función de eliminación de cuenta próximamente disponible');
+  // 👇 AQUÍ ESTÁ LA LÓGICA NUEVA PARA ELIMINAR CUENTA
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('¿Estás SEGURO? Esta acción eliminará tu cuenta permanentemente. Si tienes deudas, no podrás hacerlo.')) {
+      return;
+    }
+
+    try {
+      // Llamamos al endpoint de eliminación (que verifica la deuda en el backend)
+      await apiClient.delete('/auth/me');
+      
+      // Si tiene éxito:
+      showNotification('Cuenta eliminada. Lamentamos verte partir.', 'success');
+      localStorage.clear(); // Borrar token y datos
+      router.push('/login'); // Mandar al login
+      
+    } catch (err: any) {
+      // Aquí atrapamos el error si tienes deuda (mensaje rojo)
+      showNotification(err.message || 'Error al eliminar cuenta', 'error');
     }
   };
 
+  
   return (
   <div className="space-y-6">
     <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Privacidad</h2>

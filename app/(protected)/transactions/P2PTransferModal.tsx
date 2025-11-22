@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Phone, DollarSign, Send, Shield, Zap, UserCheck } from 'lucide-react';
+import { Phone, DollarSign, Send, Shield, Zap, UserCheck, Loader2, User } from 'lucide-react';
+import { apiClient } from '../../lib/api'; // Ajusta la ruta si es necesario
 
 interface P2PTransferModalProps {
   onTransferSuccess: () => void;
@@ -11,11 +12,50 @@ interface P2PTransferModalProps {
 export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModalProps) {
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState('');
+  const [recipientName, setRecipientName] = useState<string | null>(null); // NUEVO: Nombre del destinatario
+  const [isChecking, setIsChecking] = useState(false); // NUEVO: Cargando nombre
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
+  // Efecto: Buscar nombre cuando el teléfono tiene 9 dígitos
+  useEffect(() => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Si borra el número, borramos el nombre
+    if (cleanPhone.length < 9) {
+      setRecipientName(null);
+      setError(null);
+      return;
+    }
+
+    // Si tiene 9 dígitos, buscamos
+    if (cleanPhone.length === 9) {
+      const checkUser = async () => {
+        setIsChecking(true);
+        setError(null);
+        try {
+          const data: any = await apiClient.get(`/p2p/check/${cleanPhone}`);
+          setRecipientName(data.name); // Guardamos el nombre
+        } catch (err: any) {
+          setRecipientName(null);
+          // Si es 404 es que no existe, si es otro es error
+          if (err.message.includes('404')) {
+            setError('Este número no está registrado en Pixel Money.');
+          } else {
+            console.error(err);
+          }
+        } finally {
+          setIsChecking(false);
+        }
+      };
+      
+      // Debounce pequeño para no spamear si escribe muy rápido
+      const timeoutId = setTimeout(checkUser, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [phone]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,23 +64,17 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
     setSuccess(false);
 
     const transferAmount = parseFloat(amount);
+    const cleanPhone = phone.replace(/\D/g, '');
+
     if (isNaN(transferAmount) || transferAmount <= 0) {
-      setError('Por favor, ingresa un monto válido.');
+      setError('Monto inválido.');
       setLoading(false);
       return;
     }
-
-    // Validar formato básico de teléfono peruano
-    const phoneRegex = /^9\d{8}$/;
-    if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
-      setError('Por favor, ingresa un número de celular válido (9 dígitos, empezando con 9).');
-      setLoading(false);
-      return;
-    }
-
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
+    
+    // Validación extra: No enviar si no se encontró usuario
+    if (!recipientName) {
+      setError('Debes ingresar un destinatario válido.');
       setLoading(false);
       return;
     }
@@ -48,30 +82,21 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
     const idempotencyKey = uuidv4();
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/ledger/transfer/p2p`, {
+      await apiClient.request('/ledger/transfer/p2p', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': idempotencyKey, 
-        },
         body: JSON.stringify({ 
           amount: transferAmount,
-          destination_phone_number: phone.replace(/\D/g, '')
+          destination_phone_number: cleanPhone
         }),
+        headers: { 'Idempotency-Key': idempotencyKey }
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al procesar la transferencia');
-      }
 
       setSuccess(true);
       setTimeout(() => {
         onTransferSuccess();
         setAmount('');
         setPhone('');
+        setRecipientName(null); // Limpiar
         setSuccess(false);
       }, 2000);
 
@@ -84,6 +109,7 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
 
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-sky-100 dark:border-slate-700 overflow-hidden w-full max-w-md">
+      
       {/* Header */}
       <div className="bg-gradient-to-r from-sky-500 to-blue-600 p-6 text-white">
         <div className="flex items-center space-x-3">
@@ -104,7 +130,7 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
             <UserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <div>
               <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">¡Transferencia exitosa!</p>
-              <p className="text-xs text-emerald-700 dark:text-emerald-400">El dinero ha sido enviado correctamente</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">Enviado a {recipientName}</p>
             </div>
           </div>
         </div>
@@ -113,6 +139,7 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
       {/* Formulario */}
       <form onSubmit={handleSubmit} className="p-6">
         <div className="space-y-6">
+          
           {/* Campo de Teléfono */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
@@ -126,19 +153,27 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 dark:focus:ring-sky-400 dark:focus:border-sky-400 transition-all duration-200 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
-                placeholder="987654321"
+                className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 dark:focus:ring-sky-400 dark:focus:border-sky-400 transition-all duration-200"
+                placeholder="Ej: 987654321"
                 maxLength={9}
                 required
                 disabled={loading || success}
               />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span className="text-slate-400 text-sm">PE</span>
-              </div>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              Ingresa el número de 9 dígitos del destinatario
-            </p>
+            
+            {/* ZONA DE CONFIRMACIÓN DE NOMBRE (NUEVO) */}
+            <div className="mt-2 h-6">
+              {isChecking && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Buscando usuario...
+                </div>
+              )}
+              {recipientName && !isChecking && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium animate-in fade-in slide-in-from-top-1">
+                  <UserCheck className="w-4 h-4" /> Destinatario: {recipientName}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Campo de Monto */}
@@ -156,37 +191,11 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
                 min="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 dark:focus:ring-sky-400 dark:focus:border-sky-400 transition-all duration-200 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+                className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 dark:focus:ring-sky-400 dark:focus:border-sky-400"
                 placeholder="0.00"
                 required
                 disabled={loading || success}
               />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span className="text-slate-400 text-sm">PEN</span>
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              El monto se transferirá inmediatamente
-            </p>
-          </div>
-
-          {/* Información de Seguridad */}
-          <div className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-400 bg-sky-50 dark:bg-sky-900/20 p-4 rounded-xl">
-            <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 mt-0.5 flex-shrink-0" />
-            <span>Las transferencias P2P son instantáneas y seguras. Verifica el número antes de enviar.</span>
-          </div>
-
-          {/* Características Rápidas */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl">
-              <Zap className="w-4 h-4 text-sky-600 dark:text-sky-400 mx-auto mb-1" />
-              <p className="text-xs text-slate-600 dark:text-slate-400">Transacción</p>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Instantánea</p>
-            </div>
-            <div className="text-center p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl">
-              <UserCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 mx-auto mb-1" />
-              <p className="text-xs text-slate-600 dark:text-slate-400">Para usuarios</p>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Registrados</p>
             </div>
           </div>
 
@@ -197,38 +206,24 @@ export default function P2PTransferModal({ onTransferSuccess }: P2PTransferModal
             </div>
           )}
 
-          {/* Botón de Envío */}
+          {/* Botón de Envío - Deshabilitado si no hay nombre */}
           <button
             type="submit"
-            disabled={loading || success || !phone.trim() || !amount.trim()}
+            disabled={loading || success || !phone.trim() || !amount.trim() || !recipientName}
             className="w-full py-3.5 text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 rounded-xl font-semibold shadow-lg shadow-blue-500/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Procesando...
-              </>
-            ) : success ? (
-              <>
-                <UserCheck className="w-4 h-4" />
-                ¡Enviado!
+                <Loader2 className="w-4 h-4 animate-spin" /> Procesando...
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" />
-                Enviar Transferencia
+                <Send className="w-4 h-4" /> Enviar a {recipientName?.split(' ')[0] || '...'}
               </>
             )}
           </button>
         </div>
       </form>
-
-      {/* Footer Informativo */}
-      <div className="bg-sky-50 dark:bg-sky-900/10 px-6 py-4 border-t border-sky-100 dark:border-slate-700">
-        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-          • Transferencia inmediata • Sin comisiones • Máxima seguridad •
-        </p>
-      </div>
     </div>
   );
 }

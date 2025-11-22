@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { X, TrendingUp, DollarSign, Clock, Shield } from 'lucide-react';
+import { X, TrendingUp, DollarSign, Clock, Shield, User } from 'lucide-react';
+import { apiClient } from '../../lib/api'; // Ruta corregida
 
 interface LoanModalProps {
   isOpen: boolean;
@@ -12,10 +13,9 @@ interface LoanModalProps {
 
 export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalProps) {
   const [amount, setAmount] = useState('');
+  const [dni, setDni] = useState(''); // NUEVO: Estado para DNI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const API_GATEWAY_URL = 'http://localhost:8080';
 
   const handleLoanRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,9 +35,9 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
       return;
     }
 
-    const token = localStorage.getItem('pixel-token');
-    if (!token) {
-      setError('No estás autenticado.');
+    // NUEVO: Validación simple de DNI en frontend
+    if (!dni || dni.length !== 8 || !/^\d+$/.test(dni)) {
+      setError('Por favor, ingresa un DNI válido de 8 dígitos.');
       setLoading(false);
       return;
     }
@@ -45,42 +45,32 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
     const idempotencyKey = uuidv4();
 
     try {
-      const response = await fetch(`${API_GATEWAY_URL}/request-loan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify({ amount: parseFloat(amount) }),
+      // NUEVO: Enviamos 'dni' junto con 'amount'
+      await apiClient.post('/request-loan', { 
+        amount: depositAmount,
+        dni: dni 
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al procesar el préstamo');
-      }
-
-      console.log('Préstamo exitoso:', data);
+      console.log('Préstamo exitoso');
       onLoanSuccess();
       onClose();
       setAmount('');
+      setDni(''); // Limpiamos DNI también
 
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error al procesar el préstamo');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-md border border-sky-100 dark:border-slate-700 overflow-hidden animate-fade-in-up">
-        {/* Header del Modal */}
+        
+        {/* Header */}
         <div className="bg-gradient-to-r from-sky-500 to-blue-600 p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -89,45 +79,43 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
               </div>
               <div>
                 <h2 className="text-xl font-semibold">Solicitar Préstamo</h2>
-                <p className="text-sky-100 text-sm">Obtén financiamiento rápido y seguro</p>
+                <p className="text-sky-100 text-sm">Validación con RENIEC en tiempo real</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
-            >
+            <button onClick={onClose} className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors">
               <X className="w-4 h-4" />
             </button>
-          </div>
-        </div>
-
-        {/* Información del Préstamo */}
-        <div className="p-6 border-b border-sky-100 dark:border-slate-700">
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="text-center p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl">
-              <DollarSign className="w-5 h-5 text-sky-600 dark:text-sky-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-600 dark:text-slate-400">Monto Máximo</p>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">S/ 500.00</p>
-            </div>
-            <div className="text-center p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl">
-              <Clock className="w-5 h-5 text-sky-600 dark:text-sky-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-600 dark:text-slate-400">Desembolso</p>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Inmediato</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl">
-            <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Tu información está protegida con encriptación de última generación</span>
           </div>
         </div>
 
         {/* Formulario */}
         <form onSubmit={handleLoanRequest} className="p-6">
           <div className="space-y-4">
-            {/* Campo de Monto */}
+            
+            {/* NUEVO: Campo DNI */}
             <div>
-              <label htmlFor="amount" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                DNI (Requerido)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  maxLength={8}
+                  required
+                  value={dni}
+                  onChange={(e) => setDni(e.target.value.replace(/\D/g, ''))} // Solo permite números
+                  className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400"
+                  placeholder="Ingresa tu DNI"
+                />
+              </div>
+            </div>
+
+            {/* Campo Monto */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Monto a Solicitar (S/)
               </label>
               <div className="relative">
@@ -135,8 +123,6 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
                   <DollarSign className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
-                  id="amount"
-                  name="amount"
                   type="number"
                   step="0.01"
                   min="0"
@@ -144,62 +130,29 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
                   required
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 dark:focus:ring-sky-400 dark:focus:border-sky-400 transition-all duration-200"
+                  className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400"
                   placeholder="0.00"
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <span className="text-slate-400 text-sm">PEN</span>
-                </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Ingresa un monto entre S/ 1.00 y S/ 500.00
-              </p>
+              <p className="text-xs text-slate-500 mt-2">Se aplicará un interés del 5%</p>
             </div>
 
-            {/* Mensaje de Error */}
             {error && (
-              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4">
-                <p className="text-rose-700 dark:text-rose-400 text-sm text-center">{error}</p>
+              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 p-4 rounded-xl text-rose-700 text-sm text-center">
+                {error}
               </div>
             )}
 
-            {/* Botones */}
             <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="flex-1 px-4 py-3 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl font-medium transition-colors duration-200 disabled:opacity-50"
-              >
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-medium">
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 px-4 py-3 text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 rounded-xl font-medium shadow-lg shadow-blue-500/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <TrendingUp className="w-4 h-4" />
-                    Solicitar Préstamo
-                  </>
-                )}
+              <button type="submit" disabled={loading} className="flex-1 px-4 py-3 text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl font-medium shadow-lg flex justify-center gap-2">
+                {loading ? 'Validando...' : 'Solicitar'}
               </button>
             </div>
           </div>
         </form>
-
-        {/* Footer Informativo */}
-        <div className="bg-sky-50 dark:bg-sky-900/10 px-6 py-4 border-t border-sky-100 dark:border-slate-700">
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-            • Tasa de interés competitiva • Sin comisiones ocultas • Aprobación inmediata •
-          </p>
-        </div>
       </div>
     </div>
   );

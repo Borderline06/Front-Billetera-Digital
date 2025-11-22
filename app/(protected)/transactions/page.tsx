@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import P2PTransferModal from './P2PTransferModal';
 import { FaArrowUp, FaArrowDown, FaExchangeAlt, FaHistory, FaPaperPlane } from 'react-icons/fa';
 import { useNotification } from '../../contexts/NotificationContext';
+import { apiClient } from '../../lib/api';
 
 interface Transaction {
   id: string;
@@ -30,25 +31,20 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]); // Usa 'any' o tu interface Transaction
   const [loading, setLoading] = useState(true);
   const { showNotification } = useNotification();
 
   const fetchTransactions = async () => {
     setLoading(true);
-    const token = localStorage.getItem('pixel-token');
-    if (!token) return;
     try {
-      const res = await fetch('http://localhost:8080/ledger/transactions/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Error al cargar transacciones');
-      const data = await res.json();
+      const data = await apiClient.get('/ledger/transactions/me');
+      // El backend devuelve una lista, si no hay datos devuelve array vacío o null
       setTransactions(Array.isArray(data) ? data : []);
-      showNotification('Transacciones cargadas correctamente', 'success');
-    } catch (err) {
+      // showNotification('Cargado', 'success'); // Opcional, a veces molesta
+    } catch (err: any) {
       console.error(err);
-      showNotification('Error al cargar las transacciones', 'error');
+      showNotification('Error cargando historial', 'error');
     } finally {
       setLoading(false);
     }
@@ -60,9 +56,8 @@ export default function TransactionsPage() {
 
   const handleTransferSuccess = () => {
     fetchTransactions();
-    showNotification('¡Transferencia realizada exitosamente!', 'success');
+    showNotification('¡Transferencia exitosa!', 'success');
   };
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-900/30 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
