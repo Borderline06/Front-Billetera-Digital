@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import RequestWithdrawalModal from './RequestWithdrawalModal';
 import LeaderWithdrawalModal from './LeaderWithdrawalModal';
-import { FaUsers, FaUserShield, FaHistory, FaArrowLeft, FaSignOutAlt, FaTrash, FaMoneyBillWave, FaUserPlus } from 'react-icons/fa';
+import { FaUsers, FaUserShield, FaHistory, FaArrowLeft, FaSignOutAlt, FaTrash, FaMoneyBillWave,FaGift, FaUserPlus } from 'react-icons/fa';
 import { apiClient } from '../../../lib/api'; // Asegúrate que la ruta sea correcta
 
 // --- DEFINICIÓN DE TIPOS (Para que TypeScript no se queje) ---

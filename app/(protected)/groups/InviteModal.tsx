@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Phone, UserPlus, Users, Shield, Mail, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Phone, UserPlus, Users, Shield, Mail, CheckCircle, Loader2, UserCheck } from 'lucide-react';
 import { apiClient } from '../../lib/api';
 
 interface InviteModalProps {
@@ -11,11 +11,52 @@ interface InviteModalProps {
   group: { id: number; name: string }; 
 }
 
-export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }: InviteModalProps) {
+export default function InviteModal({
+  isOpen,
+  onClose,
+  onInviteSuccess,
+  group
+}: InviteModalProps) {
+
   const [phoneToInvite, setPhoneToInvite] = useState(''); 
+  const [inviteeName, setInviteeName] = useState<string | null>(null); // NUEVO: Nombre
+  const [isChecking, setIsChecking] = useState(false); // NUEVO: Cargando nombre
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // EFECTO: Buscar nombre automáticamente
+  useEffect(() => {
+    const cleanPhone = phoneToInvite.replace(/\D/g, '');
+    
+    if (cleanPhone.length < 9) {
+      setInviteeName(null);
+      setError(null);
+      return;
+    }
+
+    if (cleanPhone.length === 9) {
+      const checkUser = async () => {
+        setIsChecking(true);
+        setError(null);
+        try {
+          // Reusamos el endpoint que creamos para P2P
+          const data: any = await apiClient.get(`/p2p/check/${cleanPhone}`);
+          setInviteeName(data.name);
+        } catch (err: any) {
+          setInviteeName(null);
+          if (err.message.includes('404')) {
+            setError('Usuario no encontrado en Pixel Money.');
+          }
+        } finally {
+          setIsChecking(false);
+        }
+      };
+      const timeoutId = setTimeout(checkUser, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [phoneToInvite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,8 +65,9 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
     setSuccess(false);
 
     const cleanPhone = phoneToInvite.replace(/\D/g, '');
-    if (!cleanPhone.trim() || !/^9\d{8}$/.test(cleanPhone)) {
-      setError('Ingresa un celular válido (9 dígitos, empieza con 9).');
+    
+    if (!inviteeName) {
+      setError('Debes ingresar un usuario válido.');
       setLoading(false);
       return;
     }
@@ -35,12 +77,12 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
         phone_number_to_invite: cleanPhone
       });
 
-      console.log('Invitación exitosa');
       setSuccess(true);
       setTimeout(() => {
         onInviteSuccess();
         onClose();
         setPhoneToInvite('');
+        setInviteeName(null);
         setSuccess(false);
       }, 1500);
 
@@ -56,7 +98,7 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-md border border-sky-100 dark:border-slate-700 overflow-hidden animate-fade-in-up">
-        {/* Header del Modal */}
+        {/* Header */}
         <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -68,16 +110,13 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
                 <p className="text-amber-100 text-sm">Amplía tu comunidad</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
-            >
+            <button onClick={onClose} className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Información del Grupo */}
+        {/* Info Grupo */}
         <div className="p-6 border-b border-sky-100 dark:border-slate-700">
           <div className="flex items-center gap-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4">
             <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -90,7 +129,7 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
           </div>
         </div>
 
-        {/* Estado de Éxito */}
+        {/* Mensaje Éxito */}
         {success && (
           <div className="px-6 py-4 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800">
             <div className="flex items-center gap-3">
@@ -106,9 +145,8 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
-            {/* Campo de Teléfono */}
             <div>
-              <label htmlFor="phone_invite" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Número de Celular
               </label>
               <div className="relative">
@@ -116,10 +154,7 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
                   <Phone className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
-                  id="phone_invite"
-                  name="phone_invite"
                   type="tel"
-                  required
                   value={phoneToInvite}
                   onChange={(e) => setPhoneToInvite(e.target.value)}
                   className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:focus:ring-amber-400 dark:focus:border-amber-400 transition-all duration-200"
@@ -127,88 +162,43 @@ export default function InviteModal({ isOpen, onClose, onInviteSuccess, group }:
                   maxLength={9}
                   disabled={loading || success}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <span className="text-slate-400 text-sm">PE</span>
-                </div>
               </div>
-              <div className="flex justify-between mt-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Ingresa el número de 9 dígitos (sin espacios)
-                </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  {phoneToInvite.length}/9
-                </p>
+              
+              {/* CONFIRMACIÓN DE NOMBRE */}
+              <div className="mt-2 h-6">
+                {isChecking && (
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Buscando usuario...
+                  </div>
+                )}
+                {inviteeName && !isChecking && (
+                  <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium animate-in fade-in slide-in-from-top-1">
+                    <UserCheck className="w-4 h-4" /> Invitar a: {inviteeName}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Información de Requisitos */}
-            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
-              <h4 className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Requisitos para la invitación
-              </h4>
-              <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1">
-                <li>• El usuario debe estar registrado en Pixel Money</li>
-                <li>• Debe tener el número verificado en su cuenta</li>
-                <li>• Recibirá una notificación de invitación</li>
-              </ul>
-            </div>
-
-            {/* Información de Seguridad */}
-            <div className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-400 bg-sky-50 dark:bg-sky-900/20 p-4 rounded-xl">
-              <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 mt-0.5 flex-shrink-0" />
-              <span>Solo podrás invitar a usuarios que ya estén registrados en la plataforma.</span>
-            </div>
-
-            {/* Mensaje de Error */}
             {error && (
               <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4">
                 <p className="text-rose-700 dark:text-rose-400 text-sm text-center">{error}</p>
               </div>
             )}
 
-            {/* Botones */}
             <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading || success}
-                className="flex-1 px-4 py-3 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl font-medium transition-colors duration-200 disabled:opacity-50"
-              >
+              <button type="button" onClick={onClose} disabled={loading || success} className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-medium">
                 Cancelar
               </button>
               <button
                 type="submit"
-                disabled={loading || success || !phoneToInvite.trim()}
-                className="flex-1 px-4 py-3 text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-xl font-medium shadow-lg shadow-amber-500/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={loading || success || !inviteeName}
+                className="flex-1 px-4 py-3 text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 rounded-xl font-medium shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Enviando...
-                  </>
-                ) : success ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    ¡Enviado!
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    Invitar Usuario
-                  </>
-                )}
+                {loading ? <Loader2 className="animate-spin" /> : <><UserPlus className="w-4 h-4" /> Invitar</>}
               </button>
             </div>
           </div>
         </form>
-
-        {/* Footer Informativo */}
-        <div className="bg-amber-50 dark:bg-amber-900/10 px-6 py-4 border-t border-amber-100 dark:border-slate-700">
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-            • Solo usuarios registrados • Notificación inmediata • Aceptación voluntaria •
-          </p>
-        </div>
       </div>
     </div>
   );

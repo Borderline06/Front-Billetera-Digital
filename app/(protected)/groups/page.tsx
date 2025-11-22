@@ -6,10 +6,10 @@ import CreateGroupModal from './CreateGroupModal';
 import ContributeModal from './ContributeModal';
 import InviteModal from './InviteModal';
 import { FaUsers, FaPlus, FaClock, FaCheck, FaTimes, FaGift, FaShare } from 'react-icons/fa';
-// 👇 Importación corregida (ajusta los ../ según necesites, aquí subimos 3 niveles)
-import { apiClient } from '../../lib/api'; 
+// 👇 IMPORTACIONES CORREGIDAS (3 niveles arriba)
+import { apiClient } from '../../lib/api';
+import { useNotification } from '../../contexts/NotificationContext';
 
-// ... (Tus interfaces GroupMember y Group se quedan igual aquí) ...
 interface GroupMember {
   user_id: number;
   role: 'leader' | 'member';
@@ -29,21 +29,24 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Modales de acción rápida
   const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  
   const [myUserId, setMyUserId] = useState<number | null>(null);
+  const { showNotification } = useNotification();
 
   // --- 1. Cargar Grupos ---
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      // apiClient.get ya devuelve los datos limpios
       const data = await apiClient.get('/groups/me');
-      setGroups(data);
+      // Asegurar que data es un array
+      setGroups(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message || 'Error al cargar grupos');
+      showNotification(err.message || 'Error al cargar grupos', 'error');
     } finally {
       setLoading(false);
     }
@@ -59,9 +62,10 @@ export default function GroupsPage() {
   const handleAcceptInvite = async (groupId: number) => {
     try {
       await apiClient.post(`/groups/me/accept/${groupId}`, {});
-      fetchGroups(); // Recargar lista
+      showNotification('¡Invitación aceptada!', 'success');
+      fetchGroups(); 
     } catch (err: any) {
-      alert(err.message);
+      showNotification(err.message, 'error');
     }
   };
 
@@ -70,227 +74,151 @@ export default function GroupsPage() {
     if (!window.confirm("¿Estás seguro de que quieres rechazar esta invitación?")) return;
     try {
       await apiClient.delete(`/groups/me/reject/${groupId}`);
+      showNotification('Invitación rechazada', 'info');
       fetchGroups();
     } catch (err: any) {
-      alert(err.message);
+      showNotification(err.message, 'error');
     }
   };
 
-  // ... (Aquí sigue tu 'return (...)', ese déjalo tal cual, funcionará perfecto con estas funciones)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-900/30 p-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header Mejorado */}
-        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-sky-100 dark:border-slate-700 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center">
-                <FaUsers className="text-white text-lg" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-100 tracking-tight">
-                  Mis Grupos
-                </h1>
-                <p className="text-slate-600 dark:text-slate-400 mt-1">
-                  Gestiona tus grupos y colaboraciones financieras
-                </p>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 hover-lift flex items-center gap-2 shadow-lg shadow-blue-500/25"
-            >
-              <FaPlus className="text-sm" />
-              Crear Grupo
-            </button>
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Mis Grupos</h1>
+            <p className="text-slate-500">Gestiona tus comunidades financieras</p>
           </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-medium shadow-lg shadow-sky-500/20 transition-all"
+          >
+            <FaPlus /> Crear Grupo
+          </button>
         </div>
 
-        {/* Estados de Carga y Error */}
+        {/* Loading */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
-            <p className="text-slate-600 dark:text-slate-400">Cargando grupos...</p>
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
           </div>
         )}
 
-        {error && (
-          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl p-6 text-center">
-            <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FaUsers className="text-rose-500 text-xl" />
+        {/* Empty State */}
+        {!loading && groups.length === 0 && (
+          <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
+            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+              <FaUsers size={32} />
             </div>
-            <p className="text-rose-600 dark:text-rose-400 text-lg">{error}</p>
-          </div>
-        )}
-
-        {/* Lista de Grupos */}
-        {!loading && !error && groups.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-24 h-24 bg-slate-100 dark:bg-slate-700 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <FaUsers className="text-slate-400 text-2xl" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">
-              No tienes grupos aún
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
-              Crea tu primer grupo para empezar a colaborar financieramente con amigos, familia o compañeros.
-            </p>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 hover-lift flex items-center gap-2 mx-auto"
-            >
-              <FaPlus className="text-sm" />
+            <h3 className="text-xl font-medium text-slate-700 dark:text-slate-200">No tienes grupos aún</h3>
+            <p className="text-slate-500 mb-6">Crea uno nuevo o espera a ser invitado.</p>
+            <button onClick={() => setIsModalOpen(true)} className="text-sky-500 hover:underline">
               Crear mi primer grupo
             </button>
           </div>
         )}
 
-        {!loading && !error && groups.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {groups.map((group) => {
-              const activeMembers = group.members.filter(m => m.status === 'active');
-              const myMembership = group.members.find(m => m.user_id === myUserId);
-              const myStatus = myMembership?.status || null;
-              const isLeader = myMembership?.role === 'leader';
-              const pendingMembers = group.members.filter(m => m.status === 'pending');
+        {/* Grid de Grupos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {groups.map((group) => {
+            const myMembership = group.members.find(m => m.user_id === myUserId);
+            const myStatus = myMembership?.status || 'active';
+            const isLeader = myMembership?.role === 'leader';
+            const activeCount = group.members.filter(m => m.status === 'active').length;
 
-              return (
-                <div key={group.id} className="group">
-                  <Link href={`/groups/${group.id}`}>
-                    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-sky-100 dark:border-slate-700 hover-lift transition-all duration-300 h-full flex flex-col cursor-pointer">
-                      {/* Header de la Tarjeta */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2">
-                            {group.name}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-2">
-                            <div className={`text-xs px-2 py-1 rounded-full font-medium ${
-                              isLeader 
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' 
-                                : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
-                            }`}>
-                              {isLeader ? 'Líder' : 'Miembro'}
-                            </div>
-                            {myStatus === 'pending' && (
-                              <div className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
-                                <FaClock className="text-xs" />
-                                Pendiente
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <FaUsers className="text-white text-sm" />
-                        </div>
-                      </div>
-
-                      {/* Estadísticas */}
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                            {activeMembers.length}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            Activos
-                          </div>
-                        </div>
-                        {pendingMembers.length > 0 && (
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                              {pendingMembers.length}
-                            </div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                              Pendientes
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Fecha de creación */}
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                        Creado el {new Date(group.created_at).toLocaleDateString('es-PE', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </div>
-
-                      {/* Botones de Acción */}
-                      <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700">
-                        <div className="flex flex-wrap gap-2">
-                          {/* Invitaciones Pendientes */}
-                          {myStatus === 'pending' && (
-                            <>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleAcceptInvite(group.id);
-                                }}
-                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                              >
-                                <FaCheck className="text-xs" />
-                                Aceptar
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleRejectInvite(group.id);
-                                }}
-                                className="flex-1 bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                              >
-                                <FaTimes className="text-xs" />
-                                Rechazar
-                              </button>
-                            </>
-                          )}
-
-                          {/* Acciones para Miembros Activos */}
-                          {myStatus === 'active' && (
-                            <>
-                              {isLeader && (
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setSelectedGroup(group);
-                                    setIsInviteModalOpen(true);
-                                  }}
-                                  className="flex-1 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                >
-                                  <FaShare className="text-xs" />
-                                  Invitar
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSelectedGroup(group);
-                                  setIsContributeModalOpen(true);
-                                }}
-                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                              >
-                                <FaGift className="text-xs" />
-                                Aportar
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
+            // CONTENIDO DE LA TARJETA
+            const CardContent = () => (
+              <div className={`h-full bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border transition-all duration-300 flex flex-col
+                ${myStatus === 'pending' 
+                  ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/10' 
+                  : 'border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-sky-200 dark:hover:border-sky-800'
+                }`}>
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white line-clamp-1">{group.name}</h3>
+                    <div className="flex gap-2 mt-2">
+                      {isLeader && <span className="text-xs bg-sky-100 text-sky-700 px-2 py-1 rounded-full font-medium">Líder</span>}
+                      {myStatus === 'pending' && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium flex items-center gap-1"><FaClock size={10}/> Invitación</span>}
                     </div>
-                  </Link>
+                  </div>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm
+                    ${myStatus === 'pending' ? 'bg-amber-400' : 'bg-gradient-to-br from-sky-400 to-blue-600'}`}>
+                    <FaUsers />
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                <div className="flex-1">
+                  {myStatus === 'active' ? (
+                    <div className="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
+                      <div><span className="font-bold text-slate-700 dark:text-slate-200">{activeCount}</span> Miembros</div>
+                      <div>•</div>
+                      <div>Creado el {new Date(group.created_at).toLocaleDateString()}</div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-700 dark:text-amber-400">Te han invitado a unirte a este grupo.</p>
+                  )}
+                </div>
+
+                {/* ACCIONES */}
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex gap-2">
+                  {myStatus === 'pending' ? (
+                    <>
+                      <button 
+                        onClick={(e) => { e.preventDefault(); handleAcceptInvite(group.id); }}
+                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium flex justify-center items-center gap-2 transition-colors"
+                      >
+                        <FaCheck size={12} /> Aceptar
+                      </button>
+                      <button 
+                        onClick={(e) => { e.preventDefault(); handleRejectInvite(group.id); }}
+                        className="flex-1 py-2 bg-white border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-lg text-sm font-medium flex justify-center items-center gap-2 transition-colors"
+                      >
+                        <FaTimes size={12} /> Rechazar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {isLeader && (
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedGroup(group); setIsInviteModalOpen(true); }}
+                          className="flex-1 py-2 bg-sky-50 dark:bg-slate-700 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors flex justify-center items-center gap-2"
+                        >
+                          <FaShare size={12} /> Invitar
+                        </button>
+                      )}
+                      <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedGroup(group); setIsContributeModalOpen(true); }}
+                        className="flex-1 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg text-sm font-medium transition-colors flex justify-center items-center gap-2"
+                      >
+                        <FaGift size={12} /> Aportar
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+
+            // LINK CONDICIONAL
+            return (
+              <div key={group.id} className="h-full">
+                {myStatus === 'active' ? (
+                  <Link href={`/groups/${group.id}`} className="block h-full">
+                    <CardContent />
+                  </Link>
+                ) : (
+                  <div className="h-full cursor-default">
+                    <CardContent />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Modales */}
+      {/* MODALES */}
       <CreateGroupModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -302,9 +230,7 @@ export default function GroupsPage() {
           isOpen={isContributeModalOpen}
           onClose={() => setIsContributeModalOpen(false)}
           group={selectedGroup}
-          onContributeSuccess={() => {
-            fetchGroups();
-          }}
+          onContributeSuccess={fetchGroups}
         />
       )}
 
@@ -313,9 +239,7 @@ export default function GroupsPage() {
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
           group={selectedGroup}
-          onInviteSuccess={() => {
-            fetchGroups();
-          }}
+          onInviteSuccess={fetchGroups}
         />
       )}
     </div>

@@ -28,8 +28,23 @@ class ApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("❌ [ApiClient] Error respuesta:", response.status, errorData);
-        // Si el error es 401, podría ser útil borrar el token para forzar login, pero por ahora solo lanzamos el error
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        
+        // 👇 MEJORA: Detectar si el error es una lista de validación (Pydantic)
+        let errorMessage = errorData.detail;
+        
+        if (Array.isArray(errorMessage)) {
+            // Si es un array (ej: [{loc: ['new_password'], msg: 'field required'}])
+            // Lo convertimos a texto legible
+            errorMessage = errorMessage.map((err: any) => 
+                `${err.loc[err.loc.length - 1]}: ${err.msg}`
+            ).join(' | ');
+        } else if (typeof errorMessage === 'object') {
+            errorMessage = JSON.stringify(errorMessage);
+        } else if (!errorMessage) {
+            errorMessage = `HTTP error! status: ${response.status}`;
+        }
+
+        throw new Error(errorMessage);
       }
       
       if (response.status === 204) return null;
