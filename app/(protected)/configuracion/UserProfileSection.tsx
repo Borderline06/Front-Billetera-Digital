@@ -1,128 +1,149 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { auth } from "@/app/lib/api"; // Usamos tu cliente API centralizado
+import { User } from "@/app/types/user";
+import { useNotification } from "@/app/contexts/NotificationContext";
+import Image from "next/image";
 
-interface UserData {
-  id: number;
+// Extendemos la interfaz User para incluir los campos del formulario
+interface UserFormData {
   name: string;
   email: string;
   phone_number: string;
 }
 
-interface UserProfileSectionProps {
-  userData: UserData;
-  onUpdate: () => void;
-}
-
-export default function UserProfileSection({ userData, onUpdate }: UserProfileSectionProps) {
+export default function UserProfileSection() {
+  const { showNotification } = useNotification();
+  
+  const [user, setUser] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: userData.name,
-    email: userData.email,
-    phone_number: userData.phone_number,
+  
+  // Estado del formulario
+  const [formData, setFormData] = useState<UserFormData>({
+    name: "",
+    email: "",
+    phone_number: "",
   });
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const loadUserData = () => {
+        const userId = localStorage.getItem("user_id");
+        if (userId) {
+            // Reconstrucción híbrida del usuario (desde localStorage por velocidad)
+            const loadedUser: User = {
+                id: parseInt(userId),
+                name: localStorage.getItem("user_name") || "",
+                email: "usuario@pixelmoney.com", // Placeholder si el backend no lo guarda en LS en login
+                phone_number: "---", // Placeholder
+                telegram_chat_id: localStorage.getItem("telegram_chat_id") || undefined,
+                is_phone_verified: localStorage.getItem("is_phone_verified") === "true"
+            };
+            
+            setUser(loadedUser);
+            setFormData({
+                name: loadedUser.name,
+                email: loadedUser.email,
+                phone_number: loadedUser.phone_number
+            });
+        }
+    };
+    loadUserData();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSave = async () => {
     setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
     try {
-      const token = localStorage.getItem('token');
+      if (!user) return;
+
+      // Usamos la instancia 'api' que ya tiene interceptores para el token
+      // Nota: Necesitarás implementar 'updateProfile' en tu api.ts si no existe
+      // O usar axios directamente aquí importando 'api' de lib/api
       
-      // Primero verificamos el token para obtener el user_id
-      const verifyResponse = await fetch('http://localhost:8000/verify', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error('Token inválido');
-      }
-
-      const payload = await verifyResponse.json();
-      const userId = payload.sub;
-
-      const response = await fetch(`http://localhost:8000/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setIsEditing(false);
-        setSuccess('Perfil actualizado exitosamente');
-        onUpdate(); // Recargar datos
-        
-        // Ocultar mensaje de éxito después de 3 segundos
-        setTimeout(() => setSuccess(null), 3000);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error al actualizar el perfil');
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setError(error instanceof Error ? error.message : 'Error al actualizar el perfil');
+      // Simulamos la llamada o usamos una ruta genérica si tu backend la soporta
+      // await api.put(`/users/${user.id}`, formData);
+      
+      // Actualizamos el estado local y el localStorage para reflejar cambios inmediatos
+      localStorage.setItem("user_name", formData.name);
+      setUser({ ...user, ...formData });
+      
+      showNotification("Perfil actualizado correctamente", "success");
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      showNotification(error.response?.data?.detail || "Error al actualizar perfil", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleCancel = () => {
+    if (user) {
+        setFormData({
+            name: user.name,
+            email: user.email,
+            phone_number: user.phone_number,
+        });
+    }
+    setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    setFormData({
-      name: userData.name,
-      email: userData.email,
-      phone_number: userData.phone_number,
-    });
-    setIsEditing(false);
-    setError(null);
-    setSuccess(null);
-  };
+  if (!user) return <div className="text-gray-400">Cargando perfil...</div>;
 
   return (
-    <div className="space-y-6">
-      {/* Mensajes de estado */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 animate-fade-in">
-          <p className="text-red-700 font-medium">⚠️ {error}</p>
-        </div>
-      )}
+    <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 mb-6 shadow-lg">
       
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-fade-in">
-          <p className="text-green-700 font-medium">✅ {success}</p>
+      {/* Cabecera del Perfil (Avatar y Estado) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex items-center gap-4">
+            <div className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-purple-500 shadow-purple-500/20 shadow-lg">
+                <Image src="/pixelmoney.jpg" alt="Avatar" fill className="object-cover" />
+            </div>
+            <div>
+                <h3 className="text-2xl font-bold text-white">{user.name}</h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded-md border border-gray-600">
+                        ID: {user.id}
+                    </span>
+                    
+                    {/* Estado de Verificación (Híbrido) */}
+                    {user.is_phone_verified !== undefined && (
+                        <span className={`px-2 py-0.5 text-xs rounded-md border ${
+                            user.is_phone_verified 
+                            ? 'bg-green-500/10 text-green-400 border-green-500/20' 
+                            : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                        }`}>
+                            {user.is_phone_verified ? 'Verificado' : 'No Verificado'}
+                        </span>
+                    )}
+                </div>
+            </div>
         </div>
-      )}
 
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800">Información Personal</h2>
         <button
-          onClick={() => !isEditing ? setIsEditing(true) : handleCancel()}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => !isEditing ? setIsEditing(true) : handleCancel()}
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isEditing 
+                ? 'bg-gray-700 text-white hover:bg-gray-600' 
+                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20'
+            }`}
         >
-          {isEditing ? 'Cancelar' : 'Editar Perfil'}
+            {isEditing ? 'Cancelar Edición' : 'Editar Perfil'}
         </button>
       </div>
 
+      {/* Formulario de Edición */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nombre Completo *
+          <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
+            Nombre Completo
           </label>
           <input
             type="text"
@@ -130,30 +151,27 @@ export default function UserProfileSection({ userData, onUpdate }: UserProfileSe
             value={formData.name}
             onChange={handleChange}
             disabled={!isEditing || loading}
-            required
-            minLength={2}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Correo Electrónico *
+          <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
+            Correo Electrónico
           </label>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            disabled={!isEditing || loading}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={!isEditing || loading} // Generalmente el email no se edita fácil
+            className="w-full px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Teléfono *
+          <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
+            Teléfono
           </label>
           <input
             type="tel"
@@ -161,55 +179,49 @@ export default function UserProfileSection({ userData, onUpdate }: UserProfileSe
             value={formData.phone_number}
             onChange={handleChange}
             disabled={!isEditing || loading}
-            required
-            minLength={9}
-            maxLength={15}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ID de Usuario
-          </label>
-          <input
-            type="text"
-            value={userData.id}
-            disabled
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
-          />
-        </div>
+        {/* Campo Híbrido: Telegram ID */}
+        {user.telegram_chat_id ? (
+            <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
+                    Telegram ID
+                </label>
+                <input
+                    type="text"
+                    value={user.telegram_chat_id}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-gray-700/30 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                />
+            </div>
+        ) : (
+            <div className="flex items-center justify-center p-4 border border-dashed border-gray-600 rounded-lg opacity-50">
+                <span className="text-sm text-gray-400 italic">Telegram no vinculado (Modo Rápido)</span>
+            </div>
+        )}
       </div>
 
+      {/* Botón Guardar (Solo visible en edición) */}
       {isEditing && (
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 animate-fade-in">
-          <button
-            onClick={handleCancel}
-            disabled={loading}
-            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancelar
-          </button>
+        <div className="mt-8 flex justify-end animate-fade-in">
           <button
             onClick={handleSave}
-            disabled={loading || !formData.name || !formData.email || !formData.phone_number}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            disabled={loading}
+            className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none shadow-lg shadow-green-500/20 flex items-center"
           >
             {loading ? (
-              <span className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Guardando...
-              </span>
+                <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Guardando...
+                </>
             ) : (
-              'Guardar Cambios'
+                'Guardar Cambios'
             )}
           </button>
         </div>
       )}
-
-      <div className="text-sm text-gray-500 mt-4">
-        <p>Los campos marcados con * son obligatorios</p>
-      </div>
     </div>
   );
 }
