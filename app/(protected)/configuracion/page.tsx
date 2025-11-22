@@ -26,7 +26,7 @@ export default function ConfiguracionPage() {
   const fetchUserData = async () => {
     try {
       setError(null);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('pixel-token');
       const userIdStr = localStorage.getItem('user_id');
 
       if (!token || !userIdStr) {

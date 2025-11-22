@@ -17,7 +17,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("pixel-token");
     const isVerifiedStr = localStorage.getItem("is_phone_verified");
 
     // 1. Sin token -> Login

@@ -18,7 +18,7 @@ export function decodeToken(token: string) {
 export function getUserIdFromToken(): number | null {
   if (typeof window === 'undefined') return null;
   
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('pixel-token');
   if (!token) return null;
 
   const decoded = decodeToken(token);
