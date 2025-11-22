@@ -47,7 +47,7 @@ interface WithdrawalRequest {
   created_at: string;
 }
 
-const API_GATEWAY_URL = 'http://localhost:8080';
+const API_GATEWAY_URL = 'https://pixel-money.koyeb.app';
 
 export default function GroupDetailPage() {
   const params = useParams();

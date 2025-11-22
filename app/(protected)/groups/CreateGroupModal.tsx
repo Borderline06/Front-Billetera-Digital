@@ -14,7 +14,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
+  const API_GATEWAY_URL = 'http://https://pixel-money.koyeb.app';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

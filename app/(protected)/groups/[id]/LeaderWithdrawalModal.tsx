@@ -20,7 +20,7 @@ export default function LeaderWithdrawalModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
+  const API_GATEWAY_URL = 'https://pixel-money.koyeb.app';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

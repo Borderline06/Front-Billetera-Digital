@@ -15,7 +15,7 @@ export default function LoanModal({ isOpen, onClose, onLoanSuccess }: LoanModalP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
+  const API_GATEWAY_URL = 'https://pixel-money.koyeb.app';
 
   const handleLoanRequest = async (e: React.FormEvent) => {
     e.preventDefault();

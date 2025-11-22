@@ -22,7 +22,7 @@ export default function InviteModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const API_GATEWAY_URL = 'http://localhost:8080';
+  const API_GATEWAY_URL = 'https://pixel-money.koyeb.app';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

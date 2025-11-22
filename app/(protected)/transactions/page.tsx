@@ -39,7 +39,7 @@ export default function TransactionsPage() {
     const token = localStorage.getItem('pixel-token');
     if (!token) return;
     try {
-      const res = await fetch('http://localhost:8080/ledger/transactions/me', {
+      const res = await fetch('https://pixel-money.koyeb.app/ledger/transactions/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Error al cargar transacciones');

@@ -24,7 +24,7 @@ export default function Sidebar() {
     const token = localStorage.getItem("pixel-token");
     if (!token) return;
 
-    fetch("http://localhost:8080/auth/me", {
+    fetch("https://pixel-money.koyeb.app/auth/me", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {

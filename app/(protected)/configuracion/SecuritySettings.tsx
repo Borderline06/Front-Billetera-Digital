@@ -44,7 +44,7 @@ export default function SecuritySettings() {
         throw new Error('No se encontró token. Inicia sesión nuevamente.');
       }
 
-      const response = await fetch('http://localhost:8000/auth/change-password', {
+      const response = await fetch('https://pixel-money.koyeb.app/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

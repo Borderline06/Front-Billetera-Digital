@@ -66,11 +66,11 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const [balanceRes, dailyRes, txRes] = await Promise.all([
-        fetch('http://localhost:8080/balance/me', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:8080/ledger/analytics/daily_balance/me', {
+        fetch('https://pixel-money.koyeb.app/balance/me', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('https://pixel-money.koyeb.app/ledger/analytics/daily_balance/me', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:8080/ledger/transactions/me', {
+        fetch('https://pixel-money.koyeb.app/ledger/transactions/me', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
